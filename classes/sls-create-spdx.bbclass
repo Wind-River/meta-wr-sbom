@@ -29,6 +29,10 @@ SPDX_UUID_NAMESPACE ??= "sbom.openembedded.org"
 SPDX_NAMESPACE_PREFIX ??= "http://spdx.org/spdxdoc"
 
 SPDX_LICENSES ??= "${WRSBOM_LAYER}/meta/files/spdx-licenses.json"
+SPDX_SUPPLIER[doc] = "The SPDX supplier field for SPDX packages created from \
+    this recipe. For SPDX documents create using this class during the build, this \
+    is the contact information for the person or organization who is doing the \
+    build."
 
 BB_HASH_IGNORE_MISMATCH = '1'
 
@@ -593,6 +597,7 @@ python do_create_spdx() {
     else:
         recipe.versionInfo = d.getVar("PV", True)
     recipe.SPDXID = oe_sbom.sbom.get_recipe_spdxid(d)
+    recipe.supplier = d.getVar("SPDX_SUPPLIER", True) or "Organization: Wind River Systems, Inc."
     recipe.comment = " PackageGroup: " + get_packagegroup()
     if bb.data.inherits_class("native", d) or bb.data.inherits_class("cross", d):
         recipe.annotations.append(create_annotation(d, "isNative"))
@@ -706,6 +711,7 @@ python do_create_spdx() {
             spdx_package.name = pkg_name
             spdx_package.versionInfo = d.getVar("PV", True)
             spdx_package.licenseDeclared = convert_license_to_spdx(package_license, package_doc, d, found_licenses)
+            spdx_package.supplier = d.getVar("SPDX_SUPPLIER", True) or "Organization: Wind River Systems, Inc."
 
             pn = d.getVar('PN', True)
             annotations = []
@@ -1113,20 +1119,20 @@ python image_packages_spdx() {
     doc.creationInfo.creators.append("Organization: Wind River Systems, Inc.")
     if 'Yocto' in d.getVar("DISTRO_NAME", True):
         doc.comment = "DISTRO: " + "Yocto-" + get_yocto_codename(d.getVar("DISTRO_VERSION", True)) + "-" + d.getVar("DISTRO_VERSION", True)
-        image_supplier = "Organization: OpenEmbedded ()"
+        image_supplier = d.getVar("SPDX_SUPPLIER", True) or "Organization: OpenEmbedded ()"
     elif 'Wind River' in d.getVar("DISTRO_NAME", True):
         doc.comment = "DISTRO: " + "WRLinux-" + d.getVar("DISTRO_VERSION", True)
-        image_supplier = "Organization: Wind River Systems, Inc."
+        image_supplier = d.getVar("SPDX_SUPPLIER", True) or "Organization: Wind River Systems, Inc."
     else:
         wr_version = d.getVar("WRLINUX_VERSION", True)
         if wr_version:
             doc.comment = "DISTRO: " + "WRLinux-" + wr_version
-            image_supplier = "Organization: Wind River Systems, Inc."
+            image_supplier = d.getVar("SPDX_SUPPLIER", True) or "Organization: Wind River Systems, Inc."
         else:
             bb_version = d.getVar("BB_VERSION", True)
             yocto_version = get_yocto_version(bb_version)
             doc.comment = "DISTRO: " + "Yocto-" + get_yocto_codename(yocto_version) + "-" + yocto_version
-            image_supplier = "Organization: OpenEmbedded ()"
+            image_supplier = d.getVar("SPDX_SUPPLIER", True) or "Organization: OpenEmbedded ()"
 
         D_name = d.getVar("DISTRO_NAME", True).strip().replace(" ", "_")
         if D_name:
@@ -1275,7 +1281,7 @@ python image_packages_spdx() {
                     collect_lics(pattern_licref, component_package.licenseDeclared, user_defined_licenses)
 
                 component_package.copyrightText = p.copyrightText
-                component_package.supplier = "Organization: OpenEmbedded ()"
+                component_package.supplier = p.supplier
                 source_name = replace_name(pkgdata["PN"], recipe_substitutes)
                 component_package.sourceInfo = "built package from: " + source_name + " " + component_package.versionInfo
 
