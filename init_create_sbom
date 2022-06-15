@@ -1,0 +1,17 @@
+#!/bin/bash
+
+layer_path=$(dirname $(realpath $BASH_SOURCE))
+
+grep -q ${layer_path} conf/bblayers.conf
+if [ $? -ne 0 ]
+then
+    bitbake-layers add-layer ${layer_path}
+else
+    echo "${layer_path} had exist in bblayers.conf"
+fi
+
+grep -q "^INHERIT.*ccm-create-spdx'" conf/local.conf
+[ $? -ne 0 ] && echo "INHERIT += 'ccm-create-spdx'" >> conf/local.conf
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH
+export LANG=en_US.UTF-8
