@@ -10,8 +10,8 @@ else
     echo "${layer_path} had exist in bblayers.conf"
 fi
 
-grep -q "^INHERIT.*ccm-create-spdx'" conf/local.conf
-[ $? -ne 0 ] && echo "INHERIT += 'ccm-create-spdx'" >> conf/local.conf
+grep -q "^INHERIT.*create-spdx'" conf/local.conf
+[ $? -ne 0 ] && echo "INHERIT += 'create-spdx'" >> conf/local.conf
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH
 export LANG=en_US.UTF-8
