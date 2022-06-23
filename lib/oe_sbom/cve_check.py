@@ -78,8 +78,8 @@ def get_patched_cves(d):
         import oe.patch
         patches_list = oe.patch.src_patches(d)
     else:
-        import oeccm.patch
-        patches_list = oeccm.patch.src_patches(d)
+        import oe_sbom.patch
+        patches_list = oe_sbom.patch.src_patches(d)
 
     pn = d.getVar("PN", True)
     cve_match = re.compile("CVE:( CVE\-\d{4}\-\d+)+")

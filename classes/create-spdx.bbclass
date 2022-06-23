@@ -37,10 +37,10 @@ def get_doc_namespace(d, doc):
 
 def create_annotation(d, comment):
     from datetime import datetime, timezone
-    import oeccm.spdx
+    import oe_sbom.spdx
 
     creation_time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    annotation = oeccm.spdx.SPDXAnnotation()
+    annotation = oe_sbom.spdx.SPDXAnnotation()
     annotation.annotationDate = creation_time
     annotation.annotationType = "OTHER"
     annotation.annotator = "Tool: %s - %s" % (d.getVar("SPDX_TOOL_NAME", True), d.getVar("SPDX_TOOL_VERSION", True))
@@ -76,7 +76,7 @@ python() {
 
 def convert_license_to_spdx(lic, document, d, existing={}):
     from pathlib import Path
-    import oeccm.spdx
+    import oe_sbom.spdx
 
     available_licenses = d.getVar("AVAILABLE_LICENSES", True).split()
     license_data = d.getVar("SPDX_LICENSE_DATA", True)
@@ -88,7 +88,7 @@ def convert_license_to_spdx(lic, document, d, existing={}):
         if name in extracted:
             return
 
-        extracted_info = oeccm.spdx.SPDXExtractedLicensingInfo()
+        extracted_info = oe_sbom.spdx.SPDXExtractedLicensingInfo()
         extracted_info.name = name
         extracted_info.licenseId = ident
         extracted_info.extractedText = None
@@ -181,7 +181,7 @@ def process_sources(d):
 
 def add_package_files(d, doc, spdx_pkg, topdir, get_spdxid, get_types, *, archive=None, ignore_dirs=[], ignore_top_level_dirs=[]):
     from pathlib import Path
-    import oeccm.spdx
+    import oe_sbom.spdx
     import hashlib
 
     source_date_epoch = d.getVar("SOURCE_DATE_EPOCH", True)
@@ -202,7 +202,7 @@ def add_package_files(d, doc, spdx_pkg, topdir, get_spdxid, get_types, *, archiv
             filename = str(filepath.relative_to(topdir))
 
             if filepath.is_file() and not filepath.is_symlink():
-                spdx_file = oeccm.spdx.SPDXFile()
+                spdx_file = oe_sbom.spdx.SPDXFile()
                 spdx_file.SPDXID = get_spdxid(file_counter)
                 for t in get_types(filepath):
                     spdx_file.fileTypes.append(t)
@@ -224,11 +224,11 @@ def add_package_files(d, doc, spdx_pkg, topdir, get_spdxid, get_types, *, archiv
 
                 sha1 = bb.utils.sha1_file(filepath)
                 sha1s.append(sha1)
-                spdx_file.checksums.append(oeccm.spdx.SPDXChecksum(
+                spdx_file.checksums.append(oe_sbom.spdx.SPDXChecksum(
                         algorithm="SHA1",
                         checksumValue=sha1,
                     ))
-                spdx_file.checksums.append(oeccm.spdx.SPDXChecksum(
+                spdx_file.checksums.append(oe_sbom.spdx.SPDXChecksum(
                         algorithm="SHA256",
                         checksumValue=bb.utils.sha256_file(filepath),
                     ))
@@ -252,8 +252,8 @@ def add_package_files(d, doc, spdx_pkg, topdir, get_spdxid, get_types, *, archiv
 def add_package_sources_from_debug(d, package_doc, spdx_package, package, package_files, sources, search_paths):
     from pathlib import Path
     import hashlib
-    import oeccm.packagedata
-    import oeccm.spdx
+    import oe_sbom.packagedata
+    import oe_sbom.spdx
 
     debug_search_paths = [
         Path(d.getVar('PKGD', True)),
@@ -265,7 +265,7 @@ def add_package_sources_from_debug(d, package_doc, spdx_package, package, packag
     for path in search_paths:
         debug_search_paths.append(Path(topdir + '/' + path))
 
-    pkg_data = oeccm.packagedata.read_subpkgdata_extended(package, d)
+    pkg_data = oe_sbom.packagedata.read_subpkgdata_extended(package, d)
 
     if pkg_data is None:
         return
@@ -298,7 +298,7 @@ def add_package_sources_from_debug(d, package_doc, spdx_package, package, packag
 
                     doc_ref = package_doc.find_external_document_ref(source_file.doc.documentNamespace)
                     if doc_ref is None:
-                        doc_ref = oeccm.spdx.SPDXExternalDocumentRef()
+                        doc_ref = oe_sbom.spdx.SPDXExternalDocumentRef()
                         doc_ref.externalDocumentId = "DocumentRef-dependency-" + source_file.doc.name
                         doc_ref.spdxDocument = source_file.doc.documentNamespace
                         doc_ref.checksum.algorithm = "SHA1"
@@ -316,8 +316,8 @@ def add_package_sources_from_debug(d, package_doc, spdx_package, package, packag
 
 def collect_dep_recipes(d, doc, spdx_recipe):
     from pathlib import Path
-    import oeccm.sbom
-    import oeccm.spdx
+    import oe_sbom.sbom
+    import oe_sbom.spdx
 
     deploy_dir_spdx = Path(d.getVar("DEPLOY_DIR_SPDX", True))
 
@@ -330,7 +330,7 @@ def collect_dep_recipes(d, doc, spdx_recipe):
     for dep_pn in deps:
         dep_recipe_path = deploy_dir_spdx / "recipes" / ("recipe-%s.spdx.json" % dep_pn)
 
-        spdx_dep_doc, spdx_dep_sha1 = oeccm.sbom.read_doc(dep_recipe_path)
+        spdx_dep_doc, spdx_dep_sha1 = oe_sbom.sbom.read_doc(dep_recipe_path)
 
         for pkg in spdx_dep_doc.packages:
             if pkg.name == dep_pn:
@@ -339,9 +339,9 @@ def collect_dep_recipes(d, doc, spdx_recipe):
         else:
             continue
 
-        dep_recipes.append(oeccm.sbom.DepRecipe(spdx_dep_doc, spdx_dep_sha1, spdx_dep_recipe))
+        dep_recipes.append(oe_sbom.sbom.DepRecipe(spdx_dep_doc, spdx_dep_sha1, spdx_dep_recipe))
 
-        dep_recipe_ref = oeccm.spdx.SPDXExternalDocumentRef()
+        dep_recipe_ref = oe_sbom.spdx.SPDXExternalDocumentRef()
         dep_recipe_ref.externalDocumentId = "DocumentRef-dependency-" + spdx_dep_doc.name
         dep_recipe_ref.spdxDocument = spdx_dep_doc.documentNamespace
         dep_recipe_ref.checksum.algorithm = "SHA1"
@@ -361,7 +361,7 @@ collect_dep_recipes[vardepsexclude] += "BB_TASKDEPDATA"
 
 
 def collect_dep_sources(d, dep_recipes):
-    import oeccm.sbom
+    import oe_sbom.sbom
 
     search_paths = []
     sources = {}
@@ -379,7 +379,7 @@ def collect_dep_sources(d, dep_recipes):
             if "SOURCE" in spdx_file.fileTypes:
                 for checksum in spdx_file.checksums:
                     if checksum.algorithm == "SHA256":
-                        sources[checksum.checksumValue] = oeccm.sbom.DepSource(dep.doc, dep.doc_sha1, dep.recipe, spdx_file)
+                        sources[checksum.checksumValue] = oe_sbom.sbom.DepSource(dep.doc, dep.doc_sha1, dep.recipe, spdx_file)
                         break
         search_paths.append(get_spdxdir_from_annotation(d, dep.recipe))
 
@@ -388,13 +388,13 @@ def collect_dep_sources(d, dep_recipes):
 
 python do_create_spdx() {
     from datetime import datetime, timezone
-    import oeccm.sbom
-    import oeccm.spdx
-    import oeccm.packagedata
+    import oe_sbom.sbom
+    import oe_sbom.spdx
+    import oe_sbom.packagedata
     import uuid
     from pathlib import Path
     from contextlib import contextmanager
-    import oeccm.cve_check
+    import oe_sbom.cve_check
 
     @contextmanager
     def optional_tarfile(name, guard, mode="w:xz"):
@@ -428,7 +428,7 @@ python do_create_spdx() {
 
     creation_time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    doc = oeccm.spdx.SPDXDocument()
+    doc = oe_sbom.spdx.SPDXDocument()
 
     doc.name = "recipe-" + d.getVar("PN", True)
     doc.documentNamespace = get_doc_namespace(d, doc)
@@ -439,10 +439,10 @@ python do_create_spdx() {
     doc.creationInfo.creators.append("Organization: OpenEmbedded ()")
     doc.creationInfo.creators.append("Person: N/A ()")
 
-    recipe = oeccm.spdx.SPDXPackage()
+    recipe = oe_sbom.spdx.SPDXPackage()
     recipe.name = d.getVar("PN", True)
     recipe.versionInfo = get_version_from_PV(d.getVar("PV", True))
-    recipe.SPDXID = oeccm.sbom.get_recipe_spdxid(d)
+    recipe.SPDXID = oe_sbom.sbom.get_recipe_spdxid(d)
     recipe.comment = " PackageGroup: " + get_packagegroup()
     if bb.data.inherits_class("native", d) or bb.data.inherits_class("cross", d):
         recipe.annotations.append(create_annotation(d, "isNative"))
@@ -476,16 +476,16 @@ python do_create_spdx() {
     # Some CVEs may be patched during the build process without incrementing the version number,
     # so querying for CVEs based on the CPE id can lead to false positives. To account for this,
     # save the CVEs fixed by patches to source information field in the SPDX.
-    patched_cves = oeccm.cve_check.get_patched_cves(d)
+    patched_cves = oe_sbom.cve_check.get_patched_cves(d)
     patched_cves = list(patched_cves)
     patched_cves = ' '.join(patched_cves)
     if patched_cves:
         recipe.sourceInfo = "CVEs fixed: " + patched_cves
 
-    cpe_ids = oeccm.cve_check.get_cpe_ids(d.getVar("CVE_PRODUCT", True), d.getVar("CVE_VERSION", True))
+    cpe_ids = oe_sbom.cve_check.get_cpe_ids(d.getVar("CVE_PRODUCT", True), d.getVar("CVE_VERSION", True))
     if cpe_ids:
         for cpe_id in cpe_ids:
-            cpe = oeccm.spdx.SPDXExternalReference()
+            cpe = oe_sbom.spdx.SPDXExternalReference()
             cpe.referenceCategory = "SECURITY"
             cpe.referenceType = "http://spdx.org/rdf/references/cpe23Type"
             cpe.referenceLocator = cpe_id
@@ -516,10 +516,10 @@ python do_create_spdx() {
 
     dep_recipes = collect_dep_recipes(d, doc, recipe)
 
-    doc_sha1 = oeccm.sbom.write_doc(d, doc, "recipes")
-    dep_recipes.append(oeccm.sbom.DepRecipe(doc, doc_sha1, recipe))
+    doc_sha1 = oe_sbom.sbom.write_doc(d, doc, "recipes")
+    dep_recipes.append(oe_sbom.sbom.DepRecipe(doc, doc_sha1, recipe))
 
-    recipe_ref = oeccm.spdx.SPDXExternalDocumentRef()
+    recipe_ref = oe_sbom.spdx.SPDXExternalDocumentRef()
     recipe_ref.externalDocumentId = "DocumentRef-recipe-" + recipe.name
     recipe_ref.spdxDocument = doc.documentNamespace
     recipe_ref.checksum.algorithm = "SHA1"
@@ -533,10 +533,10 @@ python do_create_spdx() {
 
         pkgdest = Path(d.getVar("PKGDEST", True))
         for package in d.getVar("PACKAGES", True).split():
-            if not oeccm.packagedata.packaged(package, d):
+            if not oe_sbom.packagedata.packaged(package, d):
                 continue
 
-            package_doc = oeccm.spdx.SPDXDocument()
+            package_doc = oe_sbom.spdx.SPDXDocument()
 
             distro_ver = d.getVar("DISTRO_VERSION", True)
             if 'Yocto' in d.getVar("DISTRO_NAME", True):
@@ -564,9 +564,9 @@ python do_create_spdx() {
 
             package_license = d.getVar("LICENSE:%s" % package, True) or d.getVar("LICENSE", True)
 
-            spdx_package = oeccm.spdx.SPDXPackage()
+            spdx_package = oe_sbom.spdx.SPDXPackage()
 
-            spdx_package.SPDXID = oeccm.sbom.get_package_spdxid(pkg_name)
+            spdx_package.SPDXID = oe_sbom.sbom.get_package_spdxid(pkg_name)
             spdx_package.name = pkg_name
             spdx_package.versionInfo = d.getVar("PV", True)
             #spdx_package.licenseDeclared = convert_license_to_spdx(package_license, package_doc, d, found_licenses)
@@ -584,7 +584,7 @@ python do_create_spdx() {
                     package_doc,
                     spdx_package,
                     pkgdest / package,
-                    lambda file_counter: oeccm.sbom.get_packaged_file_spdxid(pkg_name, file_counter),
+                    lambda file_counter: oe_sbom.sbom.get_packaged_file_spdxid(pkg_name, file_counter),
                     lambda filepath: ["BINARY"],
                     archive=archive,
                 )
@@ -594,7 +594,7 @@ python do_create_spdx() {
 
             add_package_sources_from_debug(d, package_doc, spdx_package, package, package_files, sources, search_paths)
 
-            oeccm.sbom.write_doc(d, package_doc, "packages")
+            oe_sbom.sbom.write_doc(d, package_doc, "packages")
 }
 # NOTE: depending on do_unpack is a hack that is necessary to get it's dependencies for archive the source
 addtask do_create_spdx after do_package do_packagedata do_unpack before do_build do_rm_work
@@ -615,8 +615,8 @@ do_create_spdx[deptask] = "do_create_spdx"
 
 def collect_package_providers(d):
     from pathlib import Path
-    import oeccm.sbom
-    import oeccm.spdx
+    import oe_sbom.sbom
+    import oe_sbom.spdx
     import json
 
     deploy_dir_spdx = Path(d.getVar("DEPLOY_DIR_SPDX", True))
@@ -630,11 +630,11 @@ def collect_package_providers(d):
     deps.append(d.getVar("PN", True))
 
     for dep_pn in deps:
-        recipe_data = oeccm.packagedata.read_pkgdata(dep_pn, d)
+        recipe_data = oe_sbom.packagedata.read_pkgdata(dep_pn, d)
 
         for pkg in recipe_data.get("PACKAGES", "").split():
 
-            pkg_data = oeccm.packagedata.read_subpkgdata_dict(pkg, d)
+            pkg_data = oe_sbom.packagedata.read_subpkgdata_dict(pkg, d)
             rprovides = set(n for n, _ in bb.utils.explode_dep_versions2(pkg_data.get("RPROVIDES", "")).items())
             rprovides.add(pkg)
 
@@ -647,9 +647,9 @@ collect_package_providers[vardepsexclude] += "BB_TASKDEPDATA"
 
 python do_create_runtime_spdx() {
     from datetime import datetime, timezone
-    import oeccm.sbom
-    import oeccm.spdx
-    import oeccm.packagedata
+    import oe_sbom.sbom
+    import oe_sbom.spdx
+    import oe_sbom.packagedata
     from pathlib import Path
 
     deploy_dir_spdx = Path(d.getVar("DEPLOY_DIR_SPDX", True))
@@ -686,12 +686,12 @@ python do_create_runtime_spdx() {
             localdata.setVar("PKG", pkg_name)
             localdata.setVar('OVERRIDES', d.getVar("OVERRIDES", False) + ":" + package)
 
-            if not oeccm.packagedata.packaged(package, localdata):
+            if not oe_sbom.packagedata.packaged(package, localdata):
                 continue
 
             pkg_spdx_path = deploy_dir_spdx / "packages" / (pkg_name + ".spdx.json")
 
-            package_doc, package_doc_sha1 = oeccm.sbom.read_doc(pkg_spdx_path)
+            package_doc, package_doc_sha1 = oe_sbom.sbom.read_doc(pkg_spdx_path)
 
             for p in package_doc.packages:
                 if p.name == pkg_name:
@@ -700,7 +700,7 @@ python do_create_runtime_spdx() {
             else:
                 bb.fatal("Package '%s' not found in %s" % (pkg_name, pkg_spdx_path))
 
-            runtime_doc = oeccm.spdx.SPDXDocument()
+            runtime_doc = oe_sbom.spdx.SPDXDocument()
             runtime_doc.name = "runtime-" + pkg_name
             runtime_doc.documentNamespace = get_doc_namespace(localdata, runtime_doc)
             runtime_doc.creationInfo.created = creation_time
@@ -710,7 +710,7 @@ python do_create_runtime_spdx() {
             runtime_doc.creationInfo.creators.append("Organization: OpenEmbedded ()")
             runtime_doc.creationInfo.creators.append("Person: N/A ()")
 
-            package_ref = oeccm.spdx.SPDXExternalDocumentRef()
+            package_ref = oe_sbom.spdx.SPDXExternalDocumentRef()
             package_ref.externalDocumentId = "DocumentRef-package-" + package
             package_ref.spdxDocument = package_doc.documentNamespace
             package_ref.checksum.algorithm = "SHA1"
@@ -732,10 +732,10 @@ python do_create_runtime_spdx() {
 
                 dep = providers[dep]
 
-                if not oeccm.packagedata.packaged(dep, localdata):
+                if not oe_sbom.packagedata.packaged(dep, localdata):
                     continue
 
-                dep_pkg_data = oeccm.packagedata.read_subpkgdata_dict(dep, d)
+                dep_pkg_data = oe_sbom.packagedata.read_subpkgdata_dict(dep, d)
                 dep_pkg = dep_pkg_data["PKG"]
 
                 if dep in dep_package_cache:
@@ -743,7 +743,7 @@ python do_create_runtime_spdx() {
                 else:
                     dep_path = deploy_dir_spdx / "packages" / ("%s.spdx.json" % dep_pkg)
 
-                    spdx_dep_doc, spdx_dep_sha1 = oeccm.sbom.read_doc(dep_path)
+                    spdx_dep_doc, spdx_dep_sha1 = oe_sbom.sbom.read_doc(dep_path)
 
                     for pkg in spdx_dep_doc.packages:
                         if pkg.name == dep_pkg:
@@ -752,7 +752,7 @@ python do_create_runtime_spdx() {
                     else:
                         bb.fatal("Package '%s' not found in %s" % (dep_pkg, dep_path))
 
-                    dep_package_ref = oeccm.spdx.SPDXExternalDocumentRef()
+                    dep_package_ref = oe_sbom.spdx.SPDXExternalDocumentRef()
                     dep_package_ref.externalDocumentId = "DocumentRef-runtime-dependency-" + spdx_dep_doc.name
                     dep_package_ref.spdxDocument = spdx_dep_doc.documentNamespace
                     dep_package_ref.checksum.algorithm = "SHA1"
@@ -769,7 +769,7 @@ python do_create_runtime_spdx() {
                 )
                 seen_deps.add(dep)
 
-            oeccm.sbom.write_doc(d, runtime_doc, "runtime", spdx_deploy)
+            oe_sbom.sbom.write_doc(d, runtime_doc, "runtime", spdx_deploy)
 }
 
 addtask do_create_runtime_spdx after do_create_spdx before do_build do_rm_work
@@ -844,8 +844,8 @@ do_rootfs[recrdeptask] += "do_create_spdx do_create_runtime_spdx"
 ROOTFS_POSTUNINSTALL_COMMAND =+ "image_combine_spdx ; "
 python image_combine_spdx() {
     import os
-    import oeccm.spdx
-    import oeccm.sbom
+    import oe_sbom.spdx
+    import oe_sbom.sbom
     import io
     import json
     from oe.rootfs import image_list_installed_packages
@@ -869,7 +869,7 @@ python image_combine_spdx() {
     imgdeploydir = Path(d.getVar("IMGDEPLOYDIR", True))
     source_date_epoch = d.getVar("SOURCE_DATE_EPOCH", True)
 
-    doc = oeccm.spdx.SPDXDocument()
+    doc = oe_sbom.spdx.SPDXDocument()
     doc.name = image_name
     doc.documentNamespace = get_doc_namespace(d, doc)
     doc.creationInfo.created = creation_time
@@ -884,24 +884,24 @@ python image_combine_spdx() {
         doc.comment = "DISTRO: " + "WRLinux-" + d.getVar("DISTRO_VERSION", True) + "  ARCH: " + d.getVar("MACHINE_ARCH", True)
     doc.documentDescribes.append("SPDXRef-Image-" + d.getVar("IMAGE_NAME", True))
 
-    image = oeccm.spdx.SPDXPackage()
+    image = oe_sbom.spdx.SPDXPackage()
     image.name = d.getVar("PN", True)
     image.versionInfo = d.getVar("PV", True)
-    image.SPDXID = oeccm.sbom.get_image_spdxid(image_name)
+    image.SPDXID = oe_sbom.sbom.get_image_spdxid(image_name)
 
     doc.packages.append(image)
 
-    spdx_package = oeccm.spdx.SPDXPackage()
+    spdx_package = oe_sbom.spdx.SPDXPackage()
 
     packages = image_list_installed_packages(d)
 
     for name in sorted(packages.keys()):
         pkg_spdx_path = deploy_dir_spdx / "packages" / (name + ".spdx.json")
-        pkg_doc, pkg_doc_sha1 = oeccm.sbom.read_doc(pkg_spdx_path)
+        pkg_doc, pkg_doc_sha1 = oe_sbom.sbom.read_doc(pkg_spdx_path)
 
         for p in pkg_doc.packages:
             if p.name == name:
-                pkg_ref = oeccm.spdx.SPDXExternalDocumentRef()
+                pkg_ref = oe_sbom.spdx.SPDXExternalDocumentRef()
                 pkg_ref.externalDocumentId = "DocumentRef-%s" % pkg_doc.name
                 pkg_ref.spdxDocument = pkg_doc.documentNamespace
                 pkg_ref.checksum.algorithm = "SHA1"
@@ -914,9 +914,9 @@ python image_combine_spdx() {
             bb.fatal("Unable to find package with name '%s' in SPDX file %s" % (name, pkg_spdx_path))
 
         runtime_spdx_path = deploy_dir_spdx / "runtime" / ("runtime-" + name + ".spdx.json")
-        runtime_doc, runtime_doc_sha1 = oeccm.sbom.read_doc(runtime_spdx_path)
+        runtime_doc, runtime_doc_sha1 = oe_sbom.sbom.read_doc(runtime_spdx_path)
 
-        runtime_ref = oeccm.spdx.SPDXExternalDocumentRef()
+        runtime_ref = oe_sbom.spdx.SPDXExternalDocumentRef()
         runtime_ref.externalDocumentId = "DocumentRef-%s" % runtime_doc.name
         runtime_ref.spdxDocument = runtime_doc.documentNamespace
         runtime_ref.checksum.algorithm = "SHA1"
@@ -970,7 +970,7 @@ python image_combine_spdx() {
             visited_docs.add(path)
 
             with path.open("rb") as f:
-                doc, sha1 = oeccm.sbom.read_doc(f)
+                doc, sha1 = oe_sbom.sbom.read_doc(f)
                 f.seek(0)
 
                 if doc.documentNamespace in visited_docs:

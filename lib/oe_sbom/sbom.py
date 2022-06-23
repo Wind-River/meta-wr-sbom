@@ -48,7 +48,7 @@ def write_doc(d, spdx_doc, subdir, spdx_deploy=None):
 
 def read_doc(fn):
     import hashlib
-    import oeccm.spdx
+    import oe_sbom.spdx
     import io
     import contextlib
 
@@ -69,6 +69,6 @@ def read_doc(fn):
             sha1.update(chunk)
 
         f.seek(0)
-        doc = oeccm.spdx.SPDXDocument.from_json(f)
+        doc = oe_sbom.spdx.SPDXDocument.from_json(f)
 
     return (doc, sha1.hexdigest())
