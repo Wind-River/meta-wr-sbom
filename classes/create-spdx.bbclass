@@ -71,7 +71,7 @@ python() {
     if d.getVar(u"SPDX_LICENSE_DATA", True):
         return
 
-    with open(d.getVar(u"SPDX_LICENSES", True), u"r") as f:
+    with open(d.getVar(u"SPDX_LICENSES", True), u"r", encoding='utf-8') as f:
         data = json.load(f)
         # Transform the license array to a dictionary
         data[u"licenses"] = dict((l[u"licenseId"], l) for l in data[u"licenses"])
