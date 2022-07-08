@@ -63,9 +63,9 @@ def is_work_shared_spdx(d):
     return bb.data.inherits_class(u'kernel', d) or (u'work-shared' in d.getVar(u'WORKDIR', True))
 
 python() {
-    from __future__ import with_statement
-    from __future__ import division
-    from __future__ import absolute_import
+    #from __future__ import with_statement
+    #from __future__ import division
+    #from __future__ import absolute_import
     from io import open
     import json
     if d.getVar(u"SPDX_LICENSE_DATA", True):
@@ -396,9 +396,9 @@ def collect_dep_sources(d, dep_recipes):
 
 
 python do_create_spdx() {
-    from __future__ import division
-    from __future__ import with_statement
-    from __future__ import absolute_import
+    #from __future__ import division
+    #from __future__ import with_statement
+    #from __future__ import absolute_import
     from datetime import datetime, timezone
     import oe_sbom.sbom
     import oe_sbom.spdx
@@ -616,9 +616,9 @@ do_create_spdx[sstate-inputdirs] = "${SPDXDEPLOY}"
 do_create_spdx[sstate-outputdirs] = "${DEPLOY_DIR_SPDX}"
 
 python do_create_spdx_setscene () {
-    from __future__ import with_statement
-    from __future__ import division
-    from __future__ import absolute_import
+    #from __future__ import with_statement
+    #from __future__ import division
+    #from __future__ import absolute_import
     sstate_setscene(d)
 }
 addtask do_create_spdx_setscene
@@ -661,8 +661,8 @@ def collect_package_providers(d):
 collect_package_providers[vardepsexclude] += "BB_TASKDEPDATA"
 
 python do_create_runtime_spdx() {
-    from __future__ import division
-    from __future__ import absolute_import
+    #from __future__ import division
+    #from __future__ import absolute_import
     from datetime import datetime, timezone
     import oe_sbom.sbom
     import oe_sbom.spdx
@@ -795,9 +795,9 @@ do_create_runtime_spdx[sstate-inputdirs] = "${SPDXRUNTIMEDEPLOY}"
 do_create_runtime_spdx[sstate-outputdirs] = "${DEPLOY_DIR_SPDX}"
 
 python do_create_runtime_spdx_setscene () {
-    from __future__ import with_statement
-    from __future__ import division
-    from __future__ import absolute_import
+    #from __future__ import with_statement
+    #from __future__ import division
+    #from __future__ import absolute_import
     sstate_setscene(d)
 }
 addtask do_create_runtime_spdx_setscene
@@ -863,9 +863,9 @@ do_rootfs[recrdeptask] += "do_create_spdx do_create_runtime_spdx"
 
 ROOTFS_POSTUNINSTALL_COMMAND =+ "image_combine_spdx ; "
 python image_combine_spdx() {
-    from __future__ import with_statement
-    from __future__ import division
-    from __future__ import absolute_import
+    #from __future__ import with_statement
+    #from __future__ import division
+    #from __future__ import absolute_import
     import os
     import oe_sbom.spdx
     import oe_sbom.sbom
