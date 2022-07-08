@@ -1,11 +1,14 @@
+from __future__ import with_statement
+from __future__ import absolute_import
 import oe.path
+from io import open
 
 class NotFoundError(bb.BBHandledException):
     def __init__(self, path):
         self.path = path
 
     def __str__(self):
-        return "Error: %s not found." % self.path
+        return u"Error: %s not found." % self.path
 
 class CmdError(bb.BBHandledException):
     def __init__(self, command, exitstatus, output):
@@ -14,7 +17,7 @@ class CmdError(bb.BBHandledException):
         self.output = output
 
     def __str__(self):
-        return "Command Error: '%s' exited with %d  Output:\n%s" % \
+        return u"Command Error: '%s' exited with %d  Output:\n%s" % \
                 (self.command, self.status, self.output)
 
 
@@ -29,8 +32,8 @@ def runcmd(args, dir = None):
         # print("cwd: %s -> %s" % (olddir, dir))
 
     try:
-        args = [ pipes.quote(str(arg)) for arg in args ]
-        cmd = " ".join(args)
+        args = [ pipes.quote(unicode(arg)) for arg in args ]
+        cmd = u" ".join(args)
         # print("cmd: %s" % cmd)
         (exitstatus, output) = oe.utils.getstatusoutput(cmd)
         if exitstatus != 0:
@@ -46,11 +49,11 @@ class PatchError(Exception):
         self.msg = msg
 
     def __str__(self):
-        return "Patch Error: %s" % self.msg
+        return u"Patch Error: %s" % self.msg
 
 class PatchSet(object):
     defaults = {
-        "strippath": 1
+        u"strippath": 1
     }
 
     def __init__(self, dir, d):
@@ -63,27 +66,27 @@ class PatchSet(object):
         return self._current
 
     def Clean(self):
-        """
+        u"""
         Clean out the patch set.  Generally includes unapplying all
         patches and wiping out all associated metadata.
         """
         raise NotImplementedError()
 
     def Import(self, patch, force):
-        if not patch.get("file"):
-            if not patch.get("remote"):
-                raise PatchError("Patch file must be specified in patch import.")
+        if not patch.get(u"file"):
+            if not patch.get(u"remote"):
+                raise PatchError(u"Patch file must be specified in patch import.")
             else:
-                patch["file"] = bb.fetch2.localpath(patch["remote"], self.d)
+                patch[u"file"] = bb.fetch2.localpath(patch[u"remote"], self.d)
 
         for param in PatchSet.defaults:
             if not patch.get(param):
                 patch[param] = PatchSet.defaults[param]
 
-        if patch.get("remote"):
-            patch["file"] = self.d.expand(bb.fetch2.localpath(patch["remote"], self.d))
+        if patch.get(u"remote"):
+            patch[u"file"] = self.d.expand(bb.fetch2.localpath(patch[u"remote"], self.d))
 
-        patch["filemd5"] = bb.utils.md5_file(patch["file"])
+        patch[u"filemd5"] = bb.utils.md5_file(patch[u"file"])
 
     def Push(self, force):
         raise NotImplementedError()
@@ -96,7 +99,7 @@ class PatchSet(object):
 
     @staticmethod
     def getPatchedFiles(patchfile, striplevel, srcdir=None):
-        """
+        u"""
         Read a patch file and determine which files it will modify.
         Params:
             patchfile: the patch file to read
@@ -109,21 +112,21 @@ class PatchSet(object):
 
         def patchedpath(patchline):
             filepth = patchline.split()[1]
-            if filepth.endswith('/dev/null'):
-                return '/dev/null'
+            if filepth.endswith(u'/dev/null'):
+                return u'/dev/null'
             filesplit = filepth.split(os.sep)
             if striplevel > len(filesplit):
-                bb.error('Patch %s has invalid strip level %d' % (patchfile, striplevel))
+                bb.error(u'Patch %s has invalid strip level %d' % (patchfile, striplevel))
                 return None
             return os.sep.join(filesplit[striplevel:])
 
-        for encoding in ['utf-8', 'latin-1']:
+        for encoding in [u'utf-8', u'latin-1']:
             try:
                 copiedmode = False
                 filelist = []
                 with open(patchfile) as f:
                     for line in f:
-                        if line.startswith('--- '):
+                        if line.startswith(u'--- '):
                             patchpth = patchedpath(line)
                             if not patchpth:
                                 break
@@ -131,11 +134,11 @@ class PatchSet(object):
                                 addedfile = patchpth
                             else:
                                 removedfile = patchpth
-                        elif line.startswith('+++ '):
+                        elif line.startswith(u'+++ '):
                             addedfile = patchedpath(line)
                             if not addedfile:
                                 break
-                        elif line.startswith('*** '):
+                        elif line.startswith(u'*** '):
                             copiedmode = True
                             removedfile = patchedpath(line)
                             if not removedfile:
@@ -145,12 +148,12 @@ class PatchSet(object):
                             addedfile = None
 
                         if addedfile and removedfile:
-                            if removedfile == '/dev/null':
-                                mode = 'A'
-                            elif addedfile == '/dev/null':
-                                mode = 'D'
+                            if removedfile == u'/dev/null':
+                                mode = u'A'
+                            elif addedfile == u'/dev/null':
+                                mode = u'D'
                             else:
-                                mode = 'M'
+                                mode = u'M'
                             if srcdir:
                                 fullpath = os.path.abspath(os.path.join(srcdir, addedfile))
                             else:
@@ -160,7 +163,7 @@ class PatchSet(object):
                 continue
             break
         else:
-            raise PatchError('Unable to decode %s' % patchfile)
+            raise PatchError(u'Unable to decode %s' % patchfile)
 
         return filelist
 
@@ -168,26 +171,26 @@ class PatchSet(object):
 class PatchTree(PatchSet):
     def __init__(self, dir, d):
         PatchSet.__init__(self, dir, d)
-        self.patchdir = os.path.join(self.dir, 'patches')
-        self.seriespath = os.path.join(self.dir, 'patches', 'series')
+        self.patchdir = os.path.join(self.dir, u'patches')
+        self.seriespath = os.path.join(self.dir, u'patches', u'series')
         bb.utils.mkdirhier(self.patchdir)
 
     def _appendPatchFile(self, patch, strippath):
-        with open(self.seriespath, 'a') as f:
-            f.write(os.path.basename(patch) + "," + strippath + "\n")
-        shellcmd = ["cat", patch, ">" , self.patchdir + "/" + os.path.basename(patch)]
-        runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
+        with open(self.seriespath, u'a') as f:
+            f.write(os.path.basename(patch) + u"," + strippath + u"\n")
+        shellcmd = [u"cat", patch, u">" , self.patchdir + u"/" + os.path.basename(patch)]
+        runcmd([u"sh", u"-c", u" ".join(shellcmd)], self.dir)
 
     def _removePatch(self, p):
         patch = {}
-        patch['file'] = p.split(",")[0]
-        patch['strippath'] = p.split(",")[1]
+        patch[u'file'] = p.split(u",")[0]
+        patch[u'strippath'] = p.split(u",")[1]
         self._applypatch(patch, False, True)
 
     def _removePatchFile(self, all = False):
         if not os.path.exists(self.seriespath):
             return
-        with open(self.seriespath, 'r+') as f:
+        with open(self.seriespath, u'r+') as f:
             patches = f.readlines()
         if all:
             for p in reversed(patches):
@@ -196,12 +199,12 @@ class PatchTree(PatchSet):
         else:
             self._removePatch(os.path.join(self.patchdir, patches[-1].strip()))
             patches.pop()
-        with open(self.seriespath, 'w') as f:
+        with open(self.seriespath, u'w') as f:
             for p in patches:
                 f.write(p)
          
     def Import(self, patch, force = None):
-        """"""
+        u""""""
         PatchSet.Import(self, patch, force)
 
         if self._current is not None:
@@ -211,39 +214,39 @@ class PatchTree(PatchSet):
         self.patches.insert(i, patch)
 
     def _applypatch(self, patch, force = False, reverse = False, run = True):
-        shellcmd = ["cat", patch['file'], "|", "patch", "-p", patch['strippath']]
+        shellcmd = [u"cat", patch[u'file'], u"|", u"patch", u"-p", patch[u'strippath']]
         if reverse:
-            shellcmd.append('-R')
+            shellcmd.append(u'-R')
 
         if not run:
-            return "sh" + "-c" + " ".join(shellcmd)
+            return u"sh" + u"-c" + u" ".join(shellcmd)
 
         if not force:
-            shellcmd.append('--dry-run')
+            shellcmd.append(u'--dry-run')
 
         try:
-            output = runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
+            output = runcmd([u"sh", u"-c", u" ".join(shellcmd)], self.dir)
 
             if force:
                 return
 
             shellcmd.pop(len(shellcmd) - 1)
-            output = runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
-        except CmdError as err:
-            raise bb.BBHandledException("Applying '%s' failed:\n%s" %
-                                        (os.path.basename(patch['file']), err.output))
+            output = runcmd([u"sh", u"-c", u" ".join(shellcmd)], self.dir)
+        except CmdError, err:
+            raise bb.BBHandledException(u"Applying '%s' failed:\n%s" %
+                                        (os.path.basename(patch[u'file']), err.output))
 
         if not reverse:
-            self._appendPatchFile(patch['file'], patch['strippath'])
+            self._appendPatchFile(patch[u'file'], patch[u'strippath'])
 
         return output
 
     def Push(self, force = False, all = False, run = True):
-        bb.note("self._current is %s" % self._current)
-        bb.note("patches is %s" % self.patches)
+        bb.note(u"self._current is %s" % self._current)
+        bb.note(u"patches is %s" % self.patches)
         if all:
             for i in self.patches:
-                bb.note("applying patch %s" % i)
+                bb.note(u"applying patch %s" % i)
                 self._applypatch(i, force)
                 self._current = i
         else:
@@ -252,7 +255,7 @@ class PatchTree(PatchSet):
             else:
                 next = 0
 
-            bb.note("applying patch %s" % self.patches[next])
+            bb.note(u"applying patch %s" % self.patches[next])
             ret = self._applypatch(self.patches[next], force)
 
             self._current = next
@@ -272,77 +275,77 @@ class PatchTree(PatchSet):
             self._current = self._current - 1
 
     def Clean(self):
-        """"""
+        u""""""
         self.Pop(all=True)
 
 class GitApplyTree(PatchTree):
-    patch_line_prefix = '%% original patch'
-    ignore_commit_prefix = '%% ignore'
+    patch_line_prefix = u'%% original patch'
+    ignore_commit_prefix = u'%% ignore'
 
     def __init__(self, dir, d):
         PatchTree.__init__(self, dir, d)
-        self.commituser = d.getVar('PATCH_GIT_USER_NAME', True)
-        self.commitemail = d.getVar('PATCH_GIT_USER_EMAIL', True)
+        self.commituser = d.getVar(u'PATCH_GIT_USER_NAME', True)
+        self.commitemail = d.getVar(u'PATCH_GIT_USER_EMAIL', True)
 
     @staticmethod
     def extractPatchHeader(patchfile):
-        """
+        u"""
         Extract just the header lines from the top of a patch file
         """
-        for encoding in ['utf-8', 'latin-1']:
+        for encoding in [u'utf-8', u'latin-1']:
             lines = []
             try:
-                with open(patchfile, 'r', encoding=encoding) as f:
+                with open(patchfile, u'r', encoding=encoding) as f:
                     for line in f:
-                        if line.startswith('Index: ') or line.startswith('diff -') or line.startswith('---'):
+                        if line.startswith(u'Index: ') or line.startswith(u'diff -') or line.startswith(u'---'):
                             break
                         lines.append(line)
             except UnicodeDecodeError:
                 continue
             break
         else:
-            raise PatchError('Unable to find a character encoding to decode %s' % patchfile)
+            raise PatchError(u'Unable to find a character encoding to decode %s' % patchfile)
         return lines
 
     @staticmethod
     def decodeAuthor(line):
         from email.header import decode_header
-        authorval = line.split(':', 1)[1].strip().replace('"', '')
+        authorval = line.split(u':', 1)[1].strip().replace(u'"', u'')
         result =  decode_header(authorval)[0][0]
-        if hasattr(result, 'decode'):
-            result = result.decode('utf-8')
+        if hasattr(result, u'decode'):
+            result = result.decode(u'utf-8')
         return result
 
     @staticmethod
     def interpretPatchHeader(headerlines):
         import re
-        author_re = re.compile('[\S ]+ <\S+@\S+\.\S+>')
-        from_commit_re = re.compile('^From [a-z0-9]{40} .*')
+        author_re = re.compile(u'[\S ]+ <\S+@\S+\.\S+>')
+        from_commit_re = re.compile(u'^From [a-z0-9]{40} .*')
         outlines = []
         author = None
         date = None
         subject = None
         for line in headerlines:
-            if line.startswith('Subject: '):
-                subject = line.split(':', 1)[1]
+            if line.startswith(u'Subject: '):
+                subject = line.split(u':', 1)[1]
                 # Remove any [PATCH][oe-core] etc.
-                subject = re.sub(r'\[.+?\]\s*', '', subject)
+                subject = re.sub(ur'\[.+?\]\s*', u'', subject)
                 continue
-            elif line.startswith('From: ') or line.startswith('Author: '):
+            elif line.startswith(u'From: ') or line.startswith(u'Author: '):
                 authorval = GitApplyTree.decodeAuthor(line)
                 # git is fussy about author formatting i.e. it must be Name <email@domain>
                 if author_re.match(authorval):
                     author = authorval
                     continue
-            elif line.startswith('Date: '):
+            elif line.startswith(u'Date: '):
                 if date is None:
-                    dateval = line.split(':', 1)[1].strip()
+                    dateval = line.split(u':', 1)[1].strip()
                     # Very crude check for date format, since git will blow up if it's not in the right
                     # format. Without e.g. a python-dateutils dependency we can't do a whole lot more
                     if len(dateval) > 12:
                         date = dateval
                 continue
-            elif not author and line.lower().startswith('signed-off-by: '):
+            elif not author and line.lower().startswith(u'signed-off-by: '):
                 authorval = GitApplyTree.decodeAuthor(line)
                 # git is fussy about author formatting i.e. it must be Name <email@domain>
                 if author_re.match(authorval):
@@ -363,7 +366,7 @@ class GitApplyTree(PatchTree):
                     break
                 elif line:
                     firstline = line
-            if firstline and not firstline.startswith(('#', 'Index:', 'Upstream-Status:')) and len(firstline) < 100:
+            if firstline and not firstline.startswith((u'#', u'Index:', u'Upstream-Status:')) and len(firstline) < 100:
                 subject = firstline
 
         return outlines, author, date, subject
@@ -371,16 +374,16 @@ class GitApplyTree(PatchTree):
     @staticmethod
     def gitCommandUserOptions(cmd, commituser=None, commitemail=None, d=None):
         if d:
-            commituser = d.getVar('PATCH_GIT_USER_NAME', True)
-            commitemail = d.getVar('PATCH_GIT_USER_EMAIL', True)
+            commituser = d.getVar(u'PATCH_GIT_USER_NAME', True)
+            commitemail = d.getVar(u'PATCH_GIT_USER_EMAIL', True)
         if commituser:
-            cmd += ['-c', 'user.name="%s"' % commituser]
+            cmd += [u'-c', u'user.name="%s"' % commituser]
         if commitemail:
-            cmd += ['-c', 'user.email="%s"' % commitemail]
+            cmd += [u'-c', u'user.email="%s"' % commitemail]
 
     @staticmethod
     def prepareCommit(patchfile, commituser=None, commitemail=None):
-        """
+        u"""
         Prepare a git commit command line based on the header from a patch file
         (typically this is useful for patches that cannot be applied with "git am" due to formatting)
         """
@@ -390,8 +393,8 @@ class GitApplyTree(PatchTree):
         outlines, author, date, subject = GitApplyTree.interpretPatchHeader(lines)
         if not author or not subject or not date:
             try:
-                shellcmd = ["git", "log", "--format=email", "--follow", "--diff-filter=A", "--", patchfile]
-                out = runcmd(["sh", "-c", " ".join(shellcmd)], os.path.dirname(patchfile))
+                shellcmd = [u"git", u"log", u"--format=email", u"--follow", u"--diff-filter=A", u"--", patchfile]
+                out = runcmd([u"sh", u"-c", u" ".join(shellcmd)], os.path.dirname(patchfile))
             except CmdError:
                 out = None
             if out:
@@ -406,22 +409,22 @@ class GitApplyTree(PatchTree):
                 if not subject:
                     subject = newsubject
         if subject and outlines and not outlines[0].strip() == subject:
-            outlines.insert(0, '%s\n\n' % subject.strip())
+            outlines.insert(0, u'%s\n\n' % subject.strip())
 
         # Write out commit message to a file
-        with tempfile.NamedTemporaryFile('w', delete=False) as tf:
+        with tempfile.NamedTemporaryFile(u'w', delete=False) as tf:
             tmpfile = tf.name
             for line in outlines:
                 tf.write(line)
         # Prepare git command
-        cmd = ["git"]
+        cmd = [u"git"]
         GitApplyTree.gitCommandUserOptions(cmd, commituser, commitemail)
-        cmd += ["commit", "-F", tmpfile]
+        cmd += [u"commit", u"-F", tmpfile]
         # git doesn't like plain email addresses as authors
-        if author and '<' in author:
-            cmd.append('--author="%s"' % author)
+        if author and u'<' in author:
+            cmd.append(u'--author="%s"' % author)
         if date:
-            cmd.append('--date="%s"' % date)
+            cmd.append(u'--date="%s"' % date)
         return (tmpfile, cmd)
 
     @staticmethod
@@ -429,24 +432,24 @@ class GitApplyTree(PatchTree):
         import tempfile
         import shutil
         import re
-        tempdir = tempfile.mkdtemp(prefix='oepatch')
+        tempdir = tempfile.mkdtemp(prefix=u'oepatch')
         try:
-            shellcmd = ["git", "format-patch", startcommit, "-o", tempdir]
+            shellcmd = [u"git", u"format-patch", startcommit, u"-o", tempdir]
             if paths:
-                shellcmd.append('--')
+                shellcmd.append(u'--')
                 shellcmd.extend(paths)
-            out = runcmd(["sh", "-c", " ".join(shellcmd)], tree)
+            out = runcmd([u"sh", u"-c", u" ".join(shellcmd)], tree)
             if out:
                 for srcfile in out.split():
-                    for encoding in ['utf-8', 'latin-1']:
+                    for encoding in [u'utf-8', u'latin-1']:
                         patchlines = []
                         outfile = None
                         try:
-                            with open(srcfile, 'r', encoding=encoding) as f:
+                            with open(srcfile, u'r', encoding=encoding) as f:
                                 for line in f:
                                     checkline = line
-                                    if checkline.startswith('Subject: '):
-                                        checkline = re.sub(r'\[.+?\]\s*', '', checkline[9:])
+                                    if checkline.startswith(u'Subject: '):
+                                        checkline = re.sub(ur'\[.+?\]\s*', u'', checkline[9:])
                                     if checkline.startswith(GitApplyTree.patch_line_prefix):
                                         outfile = line.split()[-1].strip()
                                         continue
@@ -457,11 +460,11 @@ class GitApplyTree(PatchTree):
                             continue
                         break
                     else:
-                        raise PatchError('Unable to find a character encoding to decode %s' % srcfile)
+                        raise PatchError(u'Unable to find a character encoding to decode %s' % srcfile)
 
                     if not outfile:
                         outfile = os.path.basename(srcfile)
-                    with open(os.path.join(outdir, outfile), 'w') as of:
+                    with open(os.path.join(outdir, outfile), u'w') as of:
                         for line in patchlines:
                             of.write(line)
         finally:
@@ -472,74 +475,74 @@ class GitApplyTree(PatchTree):
 
         def _applypatchhelper(shellcmd, patch, force = False, reverse = False, run = True):
             if reverse:
-                shellcmd.append('-R')
+                shellcmd.append(u'-R')
 
-            shellcmd.append(patch['file'])
+            shellcmd.append(patch[u'file'])
 
             if not run:
-                return "sh" + "-c" + " ".join(shellcmd)
+                return u"sh" + u"-c" + u" ".join(shellcmd)
 
-            return runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
+            return runcmd([u"sh", u"-c", u" ".join(shellcmd)], self.dir)
 
         # Add hooks which add a pointer to the original patch file name in the commit message
-        reporoot = (runcmd("git rev-parse --show-toplevel".split(), self.dir) or '').strip()
+        reporoot = (runcmd(u"git rev-parse --show-toplevel".split(), self.dir) or u'').strip()
         if not reporoot:
-            raise Exception("Cannot get repository root for directory %s" % self.dir)
-        hooks_dir = os.path.join(reporoot, '.git', 'hooks')
-        hooks_dir_backup = hooks_dir + '.devtool-orig'
+            raise Exception(u"Cannot get repository root for directory %s" % self.dir)
+        hooks_dir = os.path.join(reporoot, u'.git', u'hooks')
+        hooks_dir_backup = hooks_dir + u'.devtool-orig'
         if os.path.lexists(hooks_dir_backup):
-            raise Exception("Git hooks backup directory already exists: %s" % hooks_dir_backup)
+            raise Exception(u"Git hooks backup directory already exists: %s" % hooks_dir_backup)
         if os.path.lexists(hooks_dir):
             shutil.move(hooks_dir, hooks_dir_backup)
         os.mkdir(hooks_dir)
-        commithook = os.path.join(hooks_dir, 'commit-msg')
-        applyhook = os.path.join(hooks_dir, 'applypatch-msg')
-        with open(commithook, 'w') as f:
+        commithook = os.path.join(hooks_dir, u'commit-msg')
+        applyhook = os.path.join(hooks_dir, u'applypatch-msg')
+        with open(commithook, u'w') as f:
             # NOTE: the formatting here is significant; if you change it you'll also need to
             # change other places which read it back
-            f.write('echo >> $1\n')
-            f.write('echo "%s: $PATCHFILE" >> $1\n' % GitApplyTree.patch_line_prefix)
-        os.chmod(commithook, 0o755)
+            f.write(u'echo >> $1\n')
+            f.write(u'echo "%s: $PATCHFILE" >> $1\n' % GitApplyTree.patch_line_prefix)
+        os.chmod(commithook, 0755)
         shutil.copy2(commithook, applyhook)
         try:
-            patchfilevar = 'PATCHFILE="%s"' % os.path.basename(patch['file'])
+            patchfilevar = u'PATCHFILE="%s"' % os.path.basename(patch[u'file'])
             try:
-                shellcmd = [patchfilevar, "git", "--work-tree=%s" % reporoot]
+                shellcmd = [patchfilevar, u"git", u"--work-tree=%s" % reporoot]
                 self.gitCommandUserOptions(shellcmd, self.commituser, self.commitemail)
-                shellcmd += ["am", "-3", "--keep-cr", "-p%s" % patch['strippath']]
+                shellcmd += [u"am", u"-3", u"--keep-cr", u"-p%s" % patch[u'strippath']]
                 return _applypatchhelper(shellcmd, patch, force, reverse, run)
             except CmdError:
                 # Need to abort the git am, or we'll still be within it at the end
                 try:
-                    shellcmd = ["git", "--work-tree=%s" % reporoot, "am", "--abort"]
-                    runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
+                    shellcmd = [u"git", u"--work-tree=%s" % reporoot, u"am", u"--abort"]
+                    runcmd([u"sh", u"-c", u" ".join(shellcmd)], self.dir)
                 except CmdError:
                     pass
                 # git am won't always clean up after itself, sadly, so...
-                shellcmd = ["git", "--work-tree=%s" % reporoot, "reset", "--hard", "HEAD"]
-                runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
+                shellcmd = [u"git", u"--work-tree=%s" % reporoot, u"reset", u"--hard", u"HEAD"]
+                runcmd([u"sh", u"-c", u" ".join(shellcmd)], self.dir)
                 # Also need to take care of any stray untracked files
-                shellcmd = ["git", "--work-tree=%s" % reporoot, "clean", "-f"]
-                runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
+                shellcmd = [u"git", u"--work-tree=%s" % reporoot, u"clean", u"-f"]
+                runcmd([u"sh", u"-c", u" ".join(shellcmd)], self.dir)
 
                 # Fall back to git apply
-                shellcmd = ["git", "--git-dir=%s" % reporoot, "apply", "-p%s" % patch['strippath']]
+                shellcmd = [u"git", u"--git-dir=%s" % reporoot, u"apply", u"-p%s" % patch[u'strippath']]
                 try:
                     output = _applypatchhelper(shellcmd, patch, force, reverse, run)
                 except CmdError:
                     # Fall back to patch
                     output = PatchTree._applypatch(self, patch, force, reverse, run)
                 # Add all files
-                shellcmd = ["git", "add", "-f", "-A", "."]
-                output += runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
+                shellcmd = [u"git", u"add", u"-f", u"-A", u"."]
+                output += runcmd([u"sh", u"-c", u" ".join(shellcmd)], self.dir)
                 # Exclude the patches directory
-                shellcmd = ["git", "reset", "HEAD", self.patchdir]
-                output += runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
+                shellcmd = [u"git", u"reset", u"HEAD", self.patchdir]
+                output += runcmd([u"sh", u"-c", u" ".join(shellcmd)], self.dir)
                 # Commit the result
-                (tmpfile, shellcmd) = self.prepareCommit(patch['file'], self.commituser, self.commitemail)
+                (tmpfile, shellcmd) = self.prepareCommit(patch[u'file'], self.commituser, self.commitemail)
                 try:
                     shellcmd.insert(0, patchfilevar)
-                    output += runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
+                    output += runcmd([u"sh", u"-c", u" ".join(shellcmd)], self.dir)
                 finally:
                     os.remove(tmpfile)
                 return output
@@ -551,58 +554,58 @@ class GitApplyTree(PatchTree):
 
 class QuiltTree(PatchSet):
     def _runcmd(self, args, run = True):
-        quiltrc = self.d.getVar('QUILTRCFILE', True)
+        quiltrc = self.d.getVar(u'QUILTRCFILE', True)
         if not run:
-            return ["quilt"] + ["--quiltrc"] + [quiltrc] + args
-        runcmd(["quilt"] + ["--quiltrc"] + [quiltrc] + args, self.dir)
+            return [u"quilt"] + [u"--quiltrc"] + [quiltrc] + args
+        runcmd([u"quilt"] + [u"--quiltrc"] + [quiltrc] + args, self.dir)
 
     def _quiltpatchpath(self, file):
-        return os.path.join(self.dir, "patches", os.path.basename(file))
+        return os.path.join(self.dir, u"patches", os.path.basename(file))
 
 
     def __init__(self, dir, d):
         PatchSet.__init__(self, dir, d)
         self.initialized = False
-        p = os.path.join(self.dir, 'patches')
+        p = os.path.join(self.dir, u'patches')
         if not os.path.exists(p):
             os.makedirs(p)
 
     def Clean(self):
         try:
-            self._runcmd(["pop", "-a", "-f"])
-            oe.path.remove(os.path.join(self.dir, "patches","series"))
+            self._runcmd([u"pop", u"-a", u"-f"])
+            oe.path.remove(os.path.join(self.dir, u"patches",u"series"))
         except Exception:
             pass
         self.initialized = True
 
     def InitFromDir(self):
         # read series -> self.patches
-        seriespath = os.path.join(self.dir, 'patches', 'series')
+        seriespath = os.path.join(self.dir, u'patches', u'series')
         if not os.path.exists(self.dir):
             raise NotFoundError(self.dir)
         if os.path.exists(seriespath):
-            with open(seriespath, 'r') as f:
+            with open(seriespath, u'r') as f:
                 for line in f.readlines():
                     patch = {}
                     parts = line.strip().split()
-                    patch["quiltfile"] = self._quiltpatchpath(parts[0])
-                    patch["quiltfilemd5"] = bb.utils.md5_file(patch["quiltfile"])
+                    patch[u"quiltfile"] = self._quiltpatchpath(parts[0])
+                    patch[u"quiltfilemd5"] = bb.utils.md5_file(patch[u"quiltfile"])
                     if len(parts) > 1:
-                        patch["strippath"] = parts[1][2:]
+                        patch[u"strippath"] = parts[1][2:]
                     self.patches.append(patch)
 
             # determine which patches are applied -> self._current
             try:
-                output = runcmd(["quilt", "applied"], self.dir)
+                output = runcmd([u"quilt", u"applied"], self.dir)
             except CmdError:
                 import sys
-                if sys.exc_value.output.strip() == "No patches applied":
+                if sys.exc_value.output.strip() == u"No patches applied":
                     return
                 else:
                     raise
-            output = [val for val in output.split('\n') if not val.startswith('#')]
+            output = [val for val in output.split(u'\n') if not val.startswith(u'#')]
             for patch in self.patches:
-                if os.path.basename(patch["quiltfile"]) == output[-1]:
+                if os.path.basename(patch[u"quiltfile"]) == output[-1]:
                     self._current = self.patches.index(patch)
         self.initialized = True
 
@@ -610,11 +613,11 @@ class QuiltTree(PatchSet):
         if not self.initialized:
             self.InitFromDir()
         PatchSet.Import(self, patch, force)
-        oe.path.symlink(patch["file"], self._quiltpatchpath(patch["file"]), force=True)
-        with open(os.path.join(self.dir, "patches", "series"), "a") as f:
-            f.write(os.path.basename(patch["file"]) + " -p" + patch["strippath"] + "\n")
-        patch["quiltfile"] = self._quiltpatchpath(patch["file"])
-        patch["quiltfilemd5"] = bb.utils.md5_file(patch["quiltfile"])
+        oe.path.symlink(patch[u"file"], self._quiltpatchpath(patch[u"file"]), force=True)
+        with open(os.path.join(self.dir, u"patches", u"series"), u"a") as f:
+            f.write(os.path.basename(patch[u"file"]) + u" -p" + patch[u"strippath"] + u"\n")
+        patch[u"quiltfile"] = self._quiltpatchpath(patch[u"file"])
+        patch[u"quiltfilemd5"] = bb.utils.md5_file(patch[u"quiltfile"])
 
         # TODO: determine if the file being imported:
         #      1) is already imported, and is the same
@@ -626,11 +629,11 @@ class QuiltTree(PatchSet):
     def Push(self, force = False, all = False, run = True):
         # quilt push [-f]
 
-        args = ["push"]
+        args = [u"push"]
         if force:
-            args.append("-f")
+            args.append(u"-f")
         if all:
-            args.append("-a")
+            args.append(u"-a")
         if not run:
             return self._runcmd(args, run)
 
@@ -643,11 +646,11 @@ class QuiltTree(PatchSet):
 
     def Pop(self, force = None, all = None):
         # quilt pop [-f]
-        args = ["pop"]
+        args = [u"pop"]
         if force:
-            args.append("-f")
+            args.append(u"-f")
         if all:
-            args.append("-a")
+            args.append(u"-a")
 
         self._runcmd(args)
 
@@ -658,26 +661,26 @@ class QuiltTree(PatchSet):
             self._current = self._current - 1
 
     def Refresh(self, **kwargs):
-        if kwargs.get("remote"):
-            patch = self.patches[kwargs["patch"]]
+        if kwargs.get(u"remote"):
+            patch = self.patches[kwargs[u"patch"]]
             if not patch:
-                raise PatchError("No patch found at index %s in patchset." % kwargs["patch"])
-            (type, host, path, user, pswd, parm) = bb.fetch.decodeurl(patch["remote"])
-            if type == "file":
+                raise PatchError(u"No patch found at index %s in patchset." % kwargs[u"patch"])
+            (type, host, path, user, pswd, parm) = bb.fetch.decodeurl(patch[u"remote"])
+            if type == u"file":
                 import shutil
-                if not patch.get("file") and patch.get("remote"):
-                    patch["file"] = bb.fetch2.localpath(patch["remote"], self.d)
+                if not patch.get(u"file") and patch.get(u"remote"):
+                    patch[u"file"] = bb.fetch2.localpath(patch[u"remote"], self.d)
 
-                shutil.copyfile(patch["quiltfile"], patch["file"])
+                shutil.copyfile(patch[u"quiltfile"], patch[u"file"])
             else:
-                raise PatchError("Unable to do a remote refresh of %s, unsupported remote url scheme %s." % (os.path.basename(patch["quiltfile"]), type))
+                raise PatchError(u"Unable to do a remote refresh of %s, unsupported remote url scheme %s." % (os.path.basename(patch[u"quiltfile"]), type))
         else:
             # quilt refresh
-            args = ["refresh"]
-            if kwargs.get("quiltfile"):
-                args.append(os.path.basename(kwargs["quiltfile"]))
-            elif kwargs.get("patch"):
-                args.append(os.path.basename(self.patches[kwargs["patch"]]["quiltfile"]))
+            args = [u"refresh"]
+            if kwargs.get(u"quiltfile"):
+                args.append(os.path.basename(kwargs[u"quiltfile"]))
+            elif kwargs.get(u"patch"):
+                args.append(os.path.basename(self.patches[kwargs[u"patch"]][u"quiltfile"]))
             self._runcmd(args)
 
 class Resolver(object):
@@ -723,25 +726,25 @@ class UserResolver(Resolver):
         os.chdir(self.patchset.dir)
         try:
             self.patchset.Push(False)
-        except CmdError as v:
+        except CmdError, v:
             # Patch application failed
             patchcmd = self.patchset.Push(True, False, False)
 
-            t = self.patchset.d.getVar('T', True)
+            t = self.patchset.d.getVar(u'T', True)
             if not t:
-                bb.msg.fatal("Build", "T not set")
+                bb.msg.fatal(u"Build", u"T not set")
             bb.utils.mkdirhier(t)
             import random
-            rcfile = "%s/bashrc.%s.%s" % (t, str(os.getpid()), random.random())
-            with open(rcfile, "w") as f:
-                f.write("echo '*** Manual patch resolution mode ***'\n")
-                f.write("echo 'Dropping to a shell, so patch rejects can be fixed manually.'\n")
-                f.write("echo 'Run \"quilt refresh\" when patch is corrected, press CTRL+D to exit.'\n")
-                f.write("echo ''\n")
-                f.write(" ".join(patchcmd) + "\n")
-            os.chmod(rcfile, 0o775)
+            rcfile = u"%s/bashrc.%s.%s" % (t, unicode(os.getpid()), random.random())
+            with open(rcfile, u"w") as f:
+                f.write(u"echo '*** Manual patch resolution mode ***'\n")
+                f.write(u"echo 'Dropping to a shell, so patch rejects can be fixed manually.'\n")
+                f.write(u"echo 'Run \"quilt refresh\" when patch is corrected, press CTRL+D to exit.'\n")
+                f.write(u"echo ''\n")
+                f.write(u" ".join(patchcmd) + u"\n")
+            os.chmod(rcfile, 0775)
 
-            self.terminal("bash --rcfile " + rcfile, 'Patch Rejects: Please fix patch rejects manually', self.patchset.d)
+            self.terminal(u"bash --rcfile " + rcfile, u'Patch Rejects: Please fix patch rejects manually', self.patchset.d)
 
             # Construct a new PatchSet after the user's changes, compare the
             # sets, checking patches for modifications, and doing a remote
@@ -752,19 +755,19 @@ class UserResolver(Resolver):
             for patch in self.patchset.patches:
                 oldpatch = None
                 for opatch in oldpatchset.patches:
-                    if opatch["quiltfile"] == patch["quiltfile"]:
+                    if opatch[u"quiltfile"] == patch[u"quiltfile"]:
                         oldpatch = opatch
 
                 if oldpatch:
-                    patch["remote"] = oldpatch["remote"]
-                    if patch["quiltfile"] == oldpatch["quiltfile"]:
-                        if patch["quiltfilemd5"] != oldpatch["quiltfilemd5"]:
-                            bb.note("Patch %s has changed, updating remote url %s" % (os.path.basename(patch["quiltfile"]), patch["remote"]))
+                    patch[u"remote"] = oldpatch[u"remote"]
+                    if patch[u"quiltfile"] == oldpatch[u"quiltfile"]:
+                        if patch[u"quiltfilemd5"] != oldpatch[u"quiltfilemd5"]:
+                            bb.note(u"Patch %s has changed, updating remote url %s" % (os.path.basename(patch[u"quiltfile"]), patch[u"remote"]))
                             # user change?  remote refresh
                             self.patchset.Refresh(remote=True, patch=self.patchset.patches.index(patch))
                         else:
                             # User did not fix the problem.  Abort.
-                            raise PatchError("Patch application failed, and user did not fix and refresh the patch.")
+                            raise PatchError(u"Patch application failed, and user did not fix and refresh the patch.")
         except Exception:
             os.chdir(olddir)
             raise
@@ -772,27 +775,27 @@ class UserResolver(Resolver):
 
 
 def patch_path(url, fetch, workdir, expand=True):
-    """Return the local path of a patch, or None if this isn't a patch"""
+    u"""Return the local path of a patch, or None if this isn't a patch"""
 
     local = fetch.localpath(url)
     base, ext = os.path.splitext(os.path.basename(local))
-    if ext in ('.gz', '.bz2', '.xz', '.Z'):
+    if ext in (u'.gz', u'.bz2', u'.xz', u'.Z'):
         if expand:
             local = os.path.join(workdir, base)
         ext = os.path.splitext(base)[1]
 
     urldata = fetch.ud[url]
-    if "apply" in urldata.parm:
-        apply = oe.types.boolean(urldata.parm["apply"])
+    if u"apply" in urldata.parm:
+        apply = oe.types.boolean(urldata.parm[u"apply"])
         if not apply:
             return
-    elif ext not in (".diff", ".patch"):
+    elif ext not in (u".diff", u".patch"):
         return
 
     return local
 
 def src_patches(d, all=False, expand=True):
-    workdir = d.getVar('WORKDIR', True)
+    workdir = d.getVar(u'WORKDIR', True)
     fetch = bb.fetch2.Fetch([], d)
     patches = []
     sources = []
@@ -806,29 +809,29 @@ def src_patches(d, all=False, expand=True):
 
         urldata = fetch.ud[url]
         parm = urldata.parm
-        patchname = parm.get('pname') or os.path.basename(local)
+        patchname = parm.get(u'pname') or os.path.basename(local)
 
         apply, reason = should_apply(parm, d)
         if not apply:
             if reason:
-                bb.note("Patch %s %s" % (patchname, reason))
+                bb.note(u"Patch %s %s" % (patchname, reason))
             continue
 
-        patchparm = {'patchname': patchname}
-        if "striplevel" in parm:
-            striplevel = parm["striplevel"]
-        elif "pnum" in parm:
+        patchparm = {u'patchname': patchname}
+        if u"striplevel" in parm:
+            striplevel = parm[u"striplevel"]
+        elif u"pnum" in parm:
             #bb.msg.warn(None, "Deprecated usage of 'pnum' url parameter in '%s', please use 'striplevel'" % url)
-            striplevel = parm["pnum"]
+            striplevel = parm[u"pnum"]
         else:
-            striplevel = '1'
-        patchparm['striplevel'] = striplevel
+            striplevel = u'1'
+        patchparm[u'striplevel'] = striplevel
 
-        patchdir = parm.get('patchdir')
+        patchdir = parm.get(u'patchdir')
         if patchdir:
-            patchparm['patchdir'] = patchdir
+            patchparm[u'patchdir'] = patchdir
 
-        localurl = bb.fetch.encodeurl(('file', '', local, '', '', patchparm))
+        localurl = bb.fetch.encodeurl((u'file', u'', local, u'', u'', patchparm))
         patches.append(localurl)
 
     if all:
@@ -838,41 +841,41 @@ def src_patches(d, all=False, expand=True):
 
 
 def should_apply(parm, d):
-    if "mindate" in parm or "maxdate" in parm:
-        pn = d.getVar('PN', True)
-        srcdate = d.getVar('SRCDATE_%s' % pn, True)
+    if u"mindate" in parm or u"maxdate" in parm:
+        pn = d.getVar(u'PN', True)
+        srcdate = d.getVar(u'SRCDATE_%s' % pn, True)
         if not srcdate:
-            srcdate = d.getVar('SRCDATE', True)
+            srcdate = d.getVar(u'SRCDATE', True)
 
-        if srcdate == "now":
-            srcdate = d.getVar('DATE', True)
+        if srcdate == u"now":
+            srcdate = d.getVar(u'DATE', True)
 
-        if "maxdate" in parm and parm["maxdate"] < srcdate:
-            return False, 'is outdated'
+        if u"maxdate" in parm and parm[u"maxdate"] < srcdate:
+            return False, u'is outdated'
 
-        if "mindate" in parm and parm["mindate"] > srcdate:
-            return False, 'is predated'
+        if u"mindate" in parm and parm[u"mindate"] > srcdate:
+            return False, u'is predated'
 
 
-    if "minrev" in parm:
-        srcrev = d.getVar('SRCREV', True)
-        if srcrev and srcrev < parm["minrev"]:
-            return False, 'applies to later revisions'
+    if u"minrev" in parm:
+        srcrev = d.getVar(u'SRCREV', True)
+        if srcrev and srcrev < parm[u"minrev"]:
+            return False, u'applies to later revisions'
 
-    if "maxrev" in parm:
-        srcrev = d.getVar('SRCREV', True)
-        if srcrev and srcrev > parm["maxrev"]:
-            return False, 'applies to earlier revisions'
+    if u"maxrev" in parm:
+        srcrev = d.getVar(u'SRCREV', True)
+        if srcrev and srcrev > parm[u"maxrev"]:
+            return False, u'applies to earlier revisions'
 
-    if "rev" in parm:
-        srcrev = d.getVar('SRCREV', True)
-        if srcrev and parm["rev"] not in srcrev:
-            return False, "doesn't apply to revision"
+    if u"rev" in parm:
+        srcrev = d.getVar(u'SRCREV', True)
+        if srcrev and parm[u"rev"] not in srcrev:
+            return False, u"doesn't apply to revision"
 
-    if "notrev" in parm:
-        srcrev = d.getVar('SRCREV', True)
-        if srcrev and parm["notrev"] in srcrev:
-            return False, "doesn't apply to revision"
+    if u"notrev" in parm:
+        srcrev = d.getVar(u'SRCREV', True)
+        if srcrev and parm[u"notrev"] in srcrev:
+            return False, u"doesn't apply to revision"
 
     return True, None
 

@@ -14,11 +14,12 @@
 # in schemas/spdx-schema.json
 #
 
+from __future__ import absolute_import
 import hashlib
 import itertools
 import json
 
-SPDX_VERSION = "2.2"
+SPDX_VERSION = u"2.2"
 
 
 #
@@ -26,12 +27,14 @@ SPDX_VERSION = "2.2"
 #
 
 class _Property(object):
-    """
+    u"""
     A generic SPDX object property. The different types will derive from this
     class
     """
 
-    def __init__(self, *, default=None):
+    def __init__(self, **_3to2kwargs):
+        if 'default' in _3to2kwargs: default = _3to2kwargs['default']; del _3to2kwargs['default']
+        else: default = None
         self.default = default
 
     def setdefault(self, dest, name):
@@ -40,12 +43,12 @@ class _Property(object):
 
 
 class _String(_Property):
-    """
+    u"""
     A scalar string property for an SPDX object
     """
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super(_String, self).__init__(**kwargs)
 
     def set_property(self, attrs, name):
         def get_helper(obj):
@@ -64,12 +67,12 @@ class _String(_Property):
 
 
 class _Object(_Property):
-    """
+    u"""
     A scalar SPDX object property of a SPDX object
     """
 
     def __init__(self, cls, **kwargs):
-        super().__init__(**kwargs)
+        super(_Object, self).__init__(**kwargs)
         self.cls = cls
 
     def set_property(self, attrs, name):
@@ -91,12 +94,12 @@ class _Object(_Property):
 
 
 class _ListProperty(_Property):
-    """
+    u"""
     A list of SPDX properties
     """
 
     def __init__(self, prop, **kwargs):
-        super().__init__(**kwargs)
+        super(_ListProperty, self).__init__(**kwargs)
         self.prop = prop
 
     def set_property(self, attrs, name):
@@ -115,42 +118,43 @@ class _ListProperty(_Property):
 
 
 class _StringList(_ListProperty):
-    """
+    u"""
     A list of strings as a property for an SPDX object
     """
 
     def __init__(self, **kwargs):
-        super().__init__(_String(), **kwargs)
+        super(_StringList, self).__init__(_String(), **kwargs)
 
 
 class _ObjectList(_ListProperty):
-    """
+    u"""
     A list of SPDX objects as a property for an SPDX object
     """
 
     def __init__(self, cls, **kwargs):
-        super().__init__(_Object(cls), **kwargs)
+        super(_ObjectList, self).__init__(_Object(cls), **kwargs)
 
 
 class MetaSPDXObject(type):
-    """
+    u"""
     A metaclass that allows properties (anything derived from a _Property
     class) to be defined for a SPDX object
     """
     def __new__(mcls, name, bases, attrs):
-        attrs["_properties"] = {}
+        attrs[u"_properties"] = {}
 
         for key in attrs.keys():
             if isinstance(attrs[key], _Property):
                 prop = attrs[key]
-                attrs["_properties"][key] = prop
+                attrs[u"_properties"][key] = prop
                 prop.set_property(attrs, key)
 
-        return super().__new__(mcls, name, bases, attrs)
+        return super(MetaSPDXObject, mcls).__new__(mcls, name, bases, attrs)
 
 
-class SPDXObject(metaclass=MetaSPDXObject):
-    """
+class SPDXObject(object):
+    __metaclass__ = MetaSPDXObject
+    u"""
     The base SPDX object; all SPDX spec classes must derive from this class
     """
     def __init__(self, **d):
@@ -165,10 +169,10 @@ class SPDXObject(metaclass=MetaSPDXObject):
         return self._spdx
 
     def __setattr__(self, name, value):
-        if name in self._properties or name == "_spdx":
-            super().__setattr__(name, value)
+        if name in self._properties or name == u"_spdx":
+            super(SPDXObject, self).__setattr__(name, value)
             return
-        raise KeyError("%r is not a valid SPDX property" % name)
+        raise KeyError(u"%r is not a valid SPDX property" % name)
 
 #
 # These are the SPDX objects implemented from the spec. The *only* properties
@@ -214,16 +218,16 @@ class SPDXPackage(SPDXObject):
     name = _String()
     SPDXID = _String()
     versionInfo = _String()
-    downloadLocation = _String(default="NOASSERTION")
-    supplier = _String(default="NOASSERTION")
+    downloadLocation = _String(default=u"NOASSERTION")
+    supplier = _String(default=u"NOASSERTION")
     homepage = _String()
-    licenseConcluded = _String(default="NOASSERTION")
-    licenseDeclared = _String(default="NOASSERTION")
+    licenseConcluded = _String(default=u"NOASSERTION")
+    licenseDeclared = _String(default=u"NOASSERTION")
     summary = _String()
     description = _String()
     sourceInfo = _String()
-    copyrightText = _String(default="NOASSERTION")
-    licenseInfoFromFiles = _StringList(default=["NOASSERTION"])
+    copyrightText = _String(default=u"NOASSERTION")
+    licenseInfoFromFiles = _StringList(default=[u"NOASSERTION"])
     externalRefs = _ObjectList(SPDXExternalReference)
     packageVerificationCode = _Object(SPDXPackageVerificationCode)
     hasFiles = _StringList()
@@ -235,9 +239,9 @@ class SPDXPackage(SPDXObject):
 class SPDXFile(SPDXObject):
     SPDXID = _String()
     fileName = _String()
-    licenseConcluded = _String(default="NOASSERTION")
-    copyrightText = _String(default="NOASSERTION")
-    licenseInfoInFiles = _StringList(default=["NOASSERTION"])
+    licenseConcluded = _String(default=u"NOASSERTION")
+    copyrightText = _String(default=u"NOASSERTION")
+    licenseInfoInFiles = _StringList(default=[u"NOASSERTION"])
     checksums = _ObjectList(SPDXChecksum)
     fileTypes = _StringList()
 
@@ -263,9 +267,9 @@ class SPDXExtractedLicensingInfo(SPDXObject):
 
 
 class SPDXDocument(SPDXObject):
-    spdxVersion = _String(default="SPDX-" + SPDX_VERSION)
-    dataLicense = _String(default="CC0-1.0")
-    SPDXID = _String(default="SPDXRef-DOCUMENT")
+    spdxVersion = _String(default=u"SPDX-" + SPDX_VERSION)
+    dataLicense = _String(default=u"CC0-1.0")
+    SPDXID = _String(default=u"SPDXRef-DOCUMENT")
     name = _String()
     documentNamespace = _String()
     creationInfo = _Object(SPDXCreationInfo)
@@ -278,15 +282,21 @@ class SPDXDocument(SPDXObject):
     hasExtractedLicensingInfos = _ObjectList(SPDXExtractedLicensingInfo)
 
     def __init__(self, **d):
-        super().__init__(**d)
+        super(SPDXDocument, self).__init__(**d)
 
-    def to_json(self, f, *, sort_keys=False, indent=None, separators=None):
+    def to_json(self, f, **_3to2kwargs):
+        if 'separators' in _3to2kwargs: separators = _3to2kwargs['separators']; del _3to2kwargs['separators']
+        else: separators = None
+        if 'indent' in _3to2kwargs: indent = _3to2kwargs['indent']; del _3to2kwargs['indent']
+        else: indent = None
+        if 'sort_keys' in _3to2kwargs: sort_keys = _3to2kwargs['sort_keys']; del _3to2kwargs['sort_keys']
+        else: sort_keys = False
         class Encoder(json.JSONEncoder):
             def default(self, o):
                 if isinstance(o, SPDXObject):
                     return o.serializer()
 
-                return super().default(o)
+                return super(Encoder, self).default(o)
 
         sha1 = hashlib.sha1()
         for chunk in Encoder(
@@ -294,7 +304,7 @@ class SPDXDocument(SPDXObject):
             indent=indent,
             separators=separators,
         ).iterencode(self):
-            chunk = chunk.encode("utf-8")
+            chunk = chunk.encode(u"utf-8")
             f.write(chunk)
             sha1.update(chunk)
 
@@ -304,7 +314,11 @@ class SPDXDocument(SPDXObject):
     def from_json(cls, f):
         return cls(**json.load(f))
 
-    def add_relationship(self, _from, relationship, _to, *, comment=None, annotation=None):
+    def add_relationship(self, _from, relationship, _to, **_3to2kwargs):
+        if 'annotation' in _3to2kwargs: annotation = _3to2kwargs['annotation']; del _3to2kwargs['annotation']
+        else: annotation = None
+        if 'comment' in _3to2kwargs: comment = _3to2kwargs['comment']; del _3to2kwargs['comment']
+        else: comment = None
         if isinstance(_from, SPDXObject):
             from_spdxid = _from.SPDXID
         else:

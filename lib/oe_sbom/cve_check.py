@@ -1,36 +1,38 @@
+from __future__ import with_statement
+from __future__ import absolute_import
 import collections
 import re
 import itertools
 import functools
+from io import open
 
 _Version = collections.namedtuple(
-    "_Version", ["release", "patch_l", "pre_l", "pre_v"]
+    u"_Version", [u"release", u"patch_l", u"pre_l", u"pre_v"]
 )
 
-@functools.total_ordering
-class Version():
+class Version(object):
 
     def __init__(self, version, suffix=None):
 
-        suffixes = ["alphabetical", "patch"]
+        suffixes = [u"alphabetical", u"patch"]
 
-        if str(suffix) == "alphabetical":
-            version_pattern =  r"""r?v?(?:(?P<release>[0-9]+(?:[-\.][0-9]+)*)(?P<patch>[-_\.]?(?P<patch_l>[a-z]))?(?P<pre>[-_\.]?(?P<pre_l>(rc|alpha|beta|pre|preview|dev))[-_\.]?(?P<pre_v>[0-9]+)?)?)(.*)?"""
-        elif str(suffix) == "patch":
-            version_pattern =  r"""r?v?(?:(?P<release>[0-9]+(?:[-\.][0-9]+)*)(?P<patch>[-_\.]?(p|patch)(?P<patch_l>[0-9]+))?(?P<pre>[-_\.]?(?P<pre_l>(rc|alpha|beta|pre|preview|dev))[-_\.]?(?P<pre_v>[0-9]+)?)?)(.*)?"""
+        if unicode(suffix) == u"alphabetical":
+            version_pattern =  ur"""r?v?(?:(?P<release>[0-9]+(?:[-\.][0-9]+)*)(?P<patch>[-_\.]?(?P<patch_l>[a-z]))?(?P<pre>[-_\.]?(?P<pre_l>(rc|alpha|beta|pre|preview|dev))[-_\.]?(?P<pre_v>[0-9]+)?)?)(.*)?"""
+        elif unicode(suffix) == u"patch":
+            version_pattern =  ur"""r?v?(?:(?P<release>[0-9]+(?:[-\.][0-9]+)*)(?P<patch>[-_\.]?(p|patch)(?P<patch_l>[0-9]+))?(?P<pre>[-_\.]?(?P<pre_l>(rc|alpha|beta|pre|preview|dev))[-_\.]?(?P<pre_v>[0-9]+)?)?)(.*)?"""
         else:
-            version_pattern =  r"""r?v?(?:(?P<release>[0-9]+(?:[-\.][0-9]+)*)(?P<pre>[-_\.]?(?P<pre_l>(rc|alpha|beta|pre|preview|dev))[-_\.]?(?P<pre_v>[0-9]+)?)?)(.*)?"""
-        regex = re.compile(r"^\s*" + version_pattern + r"\s*$", re.VERBOSE | re.IGNORECASE)
+            version_pattern =  ur"""r?v?(?:(?P<release>[0-9]+(?:[-\.][0-9]+)*)(?P<pre>[-_\.]?(?P<pre_l>(rc|alpha|beta|pre|preview|dev))[-_\.]?(?P<pre_v>[0-9]+)?)?)(.*)?"""
+        regex = re.compile(ur"^\s*" + version_pattern + ur"\s*$", re.VERBOSE | re.IGNORECASE)
 
         match = regex.search(version)
         if not match:
-            raise Exception("Invalid version: '{0}'".format(version))
+            raise Exception(u"Invalid version: '{0}'".format(version))
 
         self._version = _Version(
-            release=tuple(int(i) for i in match.group("release").replace("-",".").split(".")),
-            patch_l=match.group("patch_l") if str(suffix) in suffixes and match.group("patch_l") else "",
-            pre_l=match.group("pre_l"),
-            pre_v=match.group("pre_v")
+            release=tuple(int(i) for i in match.group(u"release").replace(u"-",u".").split(u".")),
+            patch_l=match.group(u"patch_l") if unicode(suffix) in suffixes and match.group(u"patch_l") else u"",
+            pre_l=match.group(u"pre_l"),
+            pre_v=match.group(u"pre_v")
         )
 
         self._key = _cmpkey(
@@ -50,6 +52,8 @@ class Version():
             return NotImplemented
         return self._key > other._key
 
+Version = functools.total_ordering(Version)
+
 def _cmpkey(release, patch_l, pre_l, pre_v):
     # remove leading 0
     _release = tuple(
@@ -59,30 +63,30 @@ def _cmpkey(release, patch_l, pre_l, pre_v):
     _patch = patch_l.upper()
 
     if pre_l is None and pre_v is None:
-        _pre = float('inf')
+        _pre = float(u'inf')
     else:
-        _pre = float(pre_v) if pre_v else float('-inf')
+        _pre = float(pre_v) if pre_v else float(u'-inf')
     return _release, _patch, _pre
 
 
 def get_patched_cves(d):
-    """
+    u"""
     Get patches that solve CVEs using the "CVE: " tag.
     """
 
     import re
-    if ('Yocto' in d.getVar("DISTRO_NAME", True)) and (d.getVar("DISTRO_VERSION", True)[:3] > '2.2'):
+    if (u'Yocto' in d.getVar(u"DISTRO_NAME", True)) and (d.getVar(u"DISTRO_VERSION", True)[:3] > u'2.2'):
         import oe.patch
         patches_list = oe.patch.src_patches(d)
-    elif ('Wind River' in d.getVar("DISTRO_NAME", True)) and (int(d.getVar("DISTRO_VERSION", True).split('.')[0]) > 9):
+    elif (u'Wind River' in d.getVar(u"DISTRO_NAME", True)) and (int(d.getVar(u"DISTRO_VERSION", True).split(u'.')[0]) > 9):
         import oe.patch
         patches_list = oe.patch.src_patches(d)
     else:
         import oe_sbom.patch
         patches_list = oe_sbom.patch.src_patches(d)
 
-    pn = d.getVar("PN", True)
-    cve_match = re.compile("CVE:( CVE\-\d{4}\-\d+)+")
+    pn = d.getVar(u"PN", True)
+    cve_match = re.compile(u"CVE:( CVE\-\d{4}\-\d+)+")
 
     # Matches the last "CVE-YYYY-ID" in the file name, also if written
     # in lowercase. Possible to have multiple CVE IDs in a single
@@ -90,15 +94,15 @@ def get_patched_cves(d):
     # However, patch files contents addressing multiple CVE IDs are supported
     # (cve_match regular expression)
 
-    cve_file_name_match = re.compile(".*([Cc][Vv][Ee]\-\d{4}\-\d+)")
+    cve_file_name_match = re.compile(u".*([Cc][Vv][Ee]\-\d{4}\-\d+)")
 
     patched_cves = set()
-    bb.debug(2, "Looking for patches that solves CVEs for %s" % pn)
+    bb.debug(2, u"Looking for patches that solves CVEs for %s" % pn)
     for url in patches_list:
         patch_file = bb.fetch.decodeurl(url)[2]
 
         if not os.path.isfile(patch_file):
-            bb.error("File Not found: %s" % patch_file)
+            bb.error(u"File Not found: %s" % patch_file)
             raise FileNotFoundError
 
         # Check patch file name for CVE ID
@@ -106,16 +110,16 @@ def get_patched_cves(d):
         if fname_match:
             cve = fname_match.group(1).upper()
             patched_cves.add(cve)
-            bb.debug(2, "Found CVE %s from patch file name %s" % (cve, patch_file))
+            bb.debug(2, u"Found CVE %s from patch file name %s" % (cve, patch_file))
 
-        with open(patch_file, "r", encoding="utf-8") as f:
+        with open(patch_file, u"r", encoding=u"utf-8") as f:
             try:
                 patch_text = f.read()
             except UnicodeDecodeError:
-                bb.debug(1, "Failed to read patch %s using UTF-8 encoding"
-                        " trying with iso8859-1" %  patch_file)
+                bb.debug(1, u"Failed to read patch %s using UTF-8 encoding"
+                        u" trying with iso8859-1" %  patch_file)
                 f.close()
-                with open(patch_file, "r", encoding="iso8859-1") as f:
+                with open(patch_file, u"r", encoding=u"iso8859-1") as f:
                     patch_text = f.read()
 
         # Search for one or more "CVE: " lines
@@ -124,31 +128,31 @@ def get_patched_cves(d):
             # Get only the CVEs without the "CVE: " tag
             cves = patch_text[match.start()+5:match.end()]
             for cve in cves.split():
-                bb.debug(2, "Patch %s solves %s" % (patch_file, cve))
+                bb.debug(2, u"Patch %s solves %s" % (patch_file, cve))
                 patched_cves.add(cve)
                 text_match = True
 
         if not fname_match and not text_match:
-            bb.debug(2, "Patch %s doesn't solve CVEs" % patch_file)
+            bb.debug(2, u"Patch %s doesn't solve CVEs" % patch_file)
 
     return patched_cves
 
 
 def get_cpe_ids(cve_product, version):
-    """
+    u"""
     Get list of CPE identifiers for the given product and version
     """
 
-    version = version.split("+git")[0]
+    version = version.split(u"+git")[0]
 
     cpe_ids = []
     for product in cve_product.split():
         # CVE_PRODUCT in recipes may include vendor information for CPE identifiers. If not,
         # use wildcard for vendor.
-        if ":" in product:
-            vendor, product = product.split(":", 1)
+        if u":" in product:
+            vendor, product = product.split(u":", 1)
         else:
-            vendor = "*"
+            vendor = u"*"
 
         cpe_id = f'cpe:2.3:a:{vendor}:{product}:{version}:*:*:*:*:*:*:*'
         cpe_ids.append(cpe_id)

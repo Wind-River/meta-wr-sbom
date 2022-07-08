@@ -2,44 +2,47 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
+from __future__ import with_statement
+from __future__ import division
+from __future__ import absolute_import
 import collections
 
-DepRecipe = collections.namedtuple("DepRecipe", ("doc", "doc_sha1", "recipe"))
-DepSource = collections.namedtuple("DepSource", ("doc", "doc_sha1", "recipe", "file"))
+DepRecipe = collections.namedtuple(u"DepRecipe", (u"doc", u"doc_sha1", u"recipe"))
+DepSource = collections.namedtuple(u"DepSource", (u"doc", u"doc_sha1", u"recipe", u"file"))
 
 
 def get_recipe_spdxid(d):
-    return "SPDXRef-%s-%s" % ("Recipe", d.getVar("PN", True))
+    return u"SPDXRef-%s-%s" % (u"Recipe", d.getVar(u"PN", True))
 
 
 def get_package_spdxid(pkg):
-    return "SPDXRef-Package-%s" % pkg
+    return u"SPDXRef-Package-%s" % pkg
 
 
 def get_source_file_spdxid(d, idx):
-    return "SPDXRef-SourceFile-%s-%d" % (d.getVar("PN", True), idx)
+    return u"SPDXRef-SourceFile-%s-%d" % (d.getVar(u"PN", True), idx)
 
 
 def get_packaged_file_spdxid(pkg, idx):
-    return "SPDXRef-PackagedFile-%s-%d" % (pkg, idx)
+    return u"SPDXRef-PackagedFile-%s-%d" % (pkg, idx)
 
 
 def get_image_spdxid(img):
-    return "SPDXRef-Image-%s" % img
+    return u"SPDXRef-Image-%s" % img
 
 
 def write_doc(d, spdx_doc, subdir, spdx_deploy=None):
     from pathlib import Path
 
     if spdx_deploy is None:
-        spdx_deploy = Path(d.getVar("SPDXDEPLOY", True))
+        spdx_deploy = Path(d.getVar(u"SPDXDEPLOY", True))
 
-    dest = spdx_deploy / subdir / (spdx_doc.name + ".spdx.json")
+    dest = spdx_deploy / subdir / (spdx_doc.name + u".spdx.json")
     dest.parent.mkdir(exist_ok=True, parents=True)
-    with dest.open("wb") as f:
+    with dest.open(u"wb") as f:
         doc_sha1 = spdx_doc.to_json(f, sort_keys=True)
 
-    l = spdx_deploy / "by-namespace" / spdx_doc.documentNamespace.replace("/", "_")
+    l = spdx_deploy / u"by-namespace" / spdx_doc.documentNamespace.replace(u"/", u"_")
     l.parent.mkdir(exist_ok=True, parents=True)
     l.symlink_to(os.path.relpath(dest, l.parent))
 
@@ -57,7 +60,7 @@ def read_doc(fn):
         if isinstance(fn, io.IOBase):
             yield fn
         else:
-            with fn.open("rb") as f:
+            with fn.open(u"rb") as f:
                 yield f
 
     with get_file() as f:
