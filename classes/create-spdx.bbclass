@@ -399,7 +399,8 @@ python do_create_spdx() {
     #from __future__ import division
     #from __future__ import with_statement
     #from __future__ import absolute_import
-    from datetime import datetime, timezone
+    from datetime import datetime
+    from pytz import timezone
     import oe_sbom.sbom
     import oe_sbom.spdx
     import oe_sbom.packagedata
