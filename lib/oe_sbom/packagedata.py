@@ -95,7 +95,7 @@ def read_subpkgdata_extended(pkg, d):
     try:
         with open(fn, "rt", encoding="utf-8") as f:
             return json.load(f)
-    except FileNotFoundError:
+    except IOError:
         return None
 
 def _pkgmap(d):
