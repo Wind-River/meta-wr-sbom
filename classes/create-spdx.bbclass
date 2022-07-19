@@ -36,10 +36,11 @@ def get_doc_namespace(d, doc):
     return "%s/%s-%s" % (d.getVar("SPDX_NAMESPACE_PREFIX", True), doc.name, unicode(uuid.uuid5(namespace_uuid, doc.name)))
 
 def create_annotation(d, comment):
-    from datetime import datetime, timezone
+    from datetime import datetime
+    from pytz import timezone
     import oe_sbom.spdx
 
-    creation_time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    creation_time = datetime.now(tz=timezone('UTC')).strftime("%Y-%m-%dT%H:%M:%SZ")
     annotation = oe_sbom.spdx.SPDXAnnotation()
     annotation.annotationDate = creation_time
     annotation.annotationType = "OTHER"
@@ -445,7 +446,7 @@ python do_create_spdx() {
     archive_sources = d.getVar("SPDX_ARCHIVE_SOURCES", True) == "1"
     archive_packaged = d.getVar("SPDX_ARCHIVE_PACKAGED", True) == "1"
 
-    creation_time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    creation_time = datetime.now(tz=timezone('UTC')).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     doc = oe_sbom.spdx.SPDXDocument()
 
@@ -669,7 +670,8 @@ collect_package_providers[vardepsexclude] += "BB_TASKDEPDATA"
 python do_create_runtime_spdx() {
     #from __future__ import division
     #from __future__ import absolute_import
-    from datetime import datetime, timezone
+    from datetime import datetime
+    from pytz import timezone
     import oe_sbom.sbom
     import oe_sbom.spdx
     import oe_sbom.packagedata
@@ -678,7 +680,7 @@ python do_create_runtime_spdx() {
     spdx_deploy = d.getVar("SPDXRUNTIMEDEPLOY", True)
     is_native = bb.data.inherits_class("native", d) or bb.data.inherits_class("cross", d)
 
-    creation_time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    creation_time = datetime.now(tz=timezone('UTC')).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     providers = collect_package_providers(d)
 
@@ -877,7 +879,8 @@ python image_combine_spdx() {
     import io
     import json
     from oe.rootfs import image_list_installed_packages
-    from datetime import timezone, datetime
+    from datetime import datetime
+    from pytz import timezone
     import tarfile
 
     def get_yocto_codename(version):
@@ -888,7 +891,7 @@ python image_combine_spdx() {
             if ver == version[:len(ver)]:
                 return yocto_version_to_codename[ver]
 
-    creation_time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    creation_time = datetime.now(tz=timezone('UTC')).strftime("%Y-%m-%dT%H:%M:%SZ")
     image_name = d.getVar("IMAGE_NAME", True)
     image_link_name = d.getVar("IMAGE_LINK_NAME", True)
 
