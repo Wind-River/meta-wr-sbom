@@ -32,19 +32,27 @@ def get_image_spdxid(img):
 
 
 def write_doc(d, spdx_doc, subdir, spdx_deploy=None):
-    from pathlib import Path
 
     if spdx_deploy is None:
-        spdx_deploy = Path(d.getVar("SPDXDEPLOY", True))
+        spdx_deploy = d.getVar("SPDXDEPLOY", True)
 
-    dest = spdx_deploy / subdir / (spdx_doc.name + ".spdx.json")
-    dest.parent.mkdir(exist_ok=True, parents=True)
-    with dest.open("wb") as f:
+    dest = spdx_deploy + '/' + subdir + '/' + (spdx_doc.name + ".spdx.json")
+
+    def os_mkdir(str_dir):
+        if not os.path.exists(os.path.abspath(os.path.dirname(str_dir))):
+            os_mkdir(os.path.abspath(os.path.dirname(str_dir)))
+
+        if not os.path.exists(str_dir):
+            os.mkdir(str_dir)
+
+    os_mkdir(os.path.dirname(dest))
+
+    with open(dest, "wb") as f:
         doc_sha1 = spdx_doc.to_json(f, sort_keys=True)
 
-    l = spdx_deploy / "by-namespace" / spdx_doc.documentNamespace.replace("/", "_")
-    l.parent.mkdir(exist_ok=True, parents=True)
-    l.symlink_to(os.path.relpath(dest, l.parent))
+    l = spdx_deploy + "/by-namespace/" + spdx_doc.documentNamespace.replace("/", "_")
+    os_mkdir(os.path.dirname(l))
+    os.symlink(os.path.relpath(dest, os.path.dirname(l)), l)
 
     return doc_sha1
 
@@ -60,7 +68,7 @@ def read_doc(fn):
         if isinstance(fn, io.IOBase):
             yield fn
         else:
-            with fn.open("rb") as f:
+            with open(fn, "rb") as f:
                 yield f
 
     with get_file() as f:

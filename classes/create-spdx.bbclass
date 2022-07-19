@@ -71,7 +71,7 @@ python() {
     if d.getVar("SPDX_LICENSE_DATA", True):
         return
 
-    with open(d.getVar("SPDX_LICENSES", True), "r", encoding='utf-8') as f:
+    with open(d.getVar("SPDX_LICENSES", True), "r") as f:
         data = json.load(f)
         # Transform the license array to a dictionary
         data["licenses"] = dict((l["licenseId"], l) for l in data["licenses"])
@@ -79,7 +79,6 @@ python() {
 }
 
 def convert_license_to_spdx(lic, document, d, existing={}):
-    from pathlib import Path
     import oe_sbom.spdx
 
     available_licenses = d.getVar("AVAILABLE_LICENSES", True).split()
@@ -103,7 +102,8 @@ def convert_license_to_spdx(lic, document, d, existing={}):
             # This license can be found in COMMON_LICENSE_DIR or LICENSE_PATH
             for directory in [d.getVar('COMMON_LICENSE_DIR', True)] + d.getVar('LICENSE_PATH', True).split():
                 try:
-                    with (Path(directory) / name).open(errors="replace") as f:
+                    #with (Path(directory) / name).open(errors="replace") as f:
+                    with open(directory + '/'+ name) as f:
                         extracted_info.extractedText = f.read()
                         break
                 except FileNotFoundError:
@@ -117,7 +117,7 @@ def convert_license_to_spdx(lic, document, d, existing={}):
             filename = d.getVarFlag('NO_GENERIC_LICENSE', name)
             if filename:
                 filename = d.expand("${S}/" + filename)
-                with open(filename, errors="replace") as f:
+                with open(filename) as f:
                     extracted_info.extractedText = f.read()
             else:
                 bb.error("Cannot find any text for license %s" % name)
@@ -189,7 +189,7 @@ def add_package_files(d, doc, spdx_pkg, topdir, get_spdxid, get_types, **_3to2kw
     else: ignore_dirs = []
     if 'archive' in _3to2kwargs: archive = _3to2kwargs['archive']; del _3to2kwargs['archive']
     else: archive = None
-    from pathlib import Path
+    import os
     import oe_sbom.spdx
     import hashlib
 
@@ -203,14 +203,14 @@ def add_package_files(d, doc, spdx_pkg, topdir, get_spdxid, get_types, **_3to2kw
     file_counter = 1
     for subdir, dirs, files in os.walk(topdir):
         dirs[:] = [d for d in dirs if d not in ignore_dirs]
-        if subdir == unicode(topdir):
+        if subdir == str(topdir):
             dirs[:] = [d for d in dirs if d not in ignore_top_level_dirs]
 
         for file in files:
-            filepath = Path(subdir) / file
-            filename = unicode(filepath.relative_to(topdir))
+            filepath = subdir + '/' + file
+            filename = str(os.path.relpath(filepath, str(topdir)))
 
-            if filepath.is_file() and not filepath.is_symlink():
+            if os.path.isfile(filepath) and not os.path.islink(filepath):
                 spdx_file = oe_sbom.spdx.SPDXFile()
                 spdx_file.SPDXID = get_spdxid(file_counter)
                 for t in get_types(filepath):
@@ -218,7 +218,7 @@ def add_package_files(d, doc, spdx_pkg, topdir, get_spdxid, get_types, **_3to2kw
                 spdx_file.fileName = filename
 
                 if archive is not None:
-                    with filepath.open("rb") as f:
+                    with open(filepath, "rb") as f:
                         info = archive.gettarinfo(fileobj=f)
                         info.name = filename
                         info.uid = 0
@@ -259,20 +259,20 @@ def add_package_files(d, doc, spdx_pkg, topdir, get_spdxid, get_types, **_3to2kw
     return spdx_files
 
 def add_package_sources_from_debug(d, package_doc, spdx_package, package, package_files, sources, search_paths):
-    from pathlib import Path
+    import os
     import hashlib
     import oe_sbom.packagedata
     import oe_sbom.spdx
 
     debug_search_paths = [
-        Path(d.getVar('PKGD', True)),
-        Path(d.getVar('STAGING_DIR_TARGET', True)),
-        Path(d.getVar('STAGING_DIR_NATIVE', True)),
-        Path(d.getVar('STAGING_KERNEL_DIR', True)),
+        d.getVar('PKGD', True),
+        d.getVar('STAGING_DIR_TARGET', True),
+        d.getVar('STAGING_DIR_NATIVE', True),
+        d.getVar('STAGING_KERNEL_DIR', True),
     ]
     topdir = d.getVar('TOPDIR', True)
     for path in search_paths:
-        debug_search_paths.append(Path(topdir + '/' + path))
+        debug_search_paths.append(topdir + '/' + path)
 
     pkg_data = oe_sbom.packagedata.read_subpkgdata_extended(package, d)
 
@@ -287,16 +287,16 @@ def add_package_sources_from_debug(d, package_doc, spdx_package, package, packag
             if file_path.lstrip("/") == pkg_file.fileName.lstrip("/"):
                 break
         else:
-            bb.fatal("No package file found for %s" % unicode(file_path))
+            bb.fatal("No package file found for %s" % str(file_path))
             continue
 
         for debugsrc in file_data["debugsrc"]:
             ref_id = "NOASSERTION"
             for search in debug_search_paths:
                 if debugsrc.startswith("/usr/src/kernel"):
-                    debugsrc_path = search / debugsrc.replace('/usr/src/kernel/', '')
+                    debugsrc_path = search + '/' + debugsrc.replace('/usr/src/kernel/', '')
                 else:
-                    debugsrc_path = search / debugsrc.lstrip("/")
+                    debugsrc_path = search + '/' + debugsrc.lstrip("/")
                 if not debugsrc_path.exists():
                     continue
 
@@ -324,11 +324,10 @@ def add_package_sources_from_debug(d, package_doc, spdx_package, package, packag
             package_doc.add_relationship(pkg_file, "GENERATED_FROM", ref_id, comment=debugsrc)
 
 def collect_dep_recipes(d, doc, spdx_recipe):
-    from pathlib import Path
     import oe_sbom.sbom
     import oe_sbom.spdx
 
-    deploy_dir_spdx = Path(d.getVar("DEPLOY_DIR_SPDX", True))
+    deploy_dir_spdx = d.getVar("DEPLOY_DIR_SPDX", True)
 
     dep_recipes = []
     taskdepdata = d.getVar("BB_TASKDEPDATA", False)
@@ -337,7 +336,7 @@ def collect_dep_recipes(d, doc, spdx_recipe):
             dep[1] == "do_create_spdx" and dep[0] != d.getVar("PN", True)
     ))
     for dep_pn in deps:
-        dep_recipe_path = deploy_dir_spdx / "recipes" / ("recipe-%s.spdx.json" % dep_pn)
+        dep_recipe_path = deploy_dir_spdx + "/recipes/" + ("recipe-%s.spdx.json" % dep_pn)
 
         spdx_dep_doc, spdx_dep_sha1 = oe_sbom.sbom.read_doc(dep_recipe_path)
 
@@ -405,16 +404,23 @@ python do_create_spdx() {
     import oe_sbom.spdx
     import oe_sbom.packagedata
     import uuid
-    from pathlib import Path
     from contextlib import contextmanager
     import oe_sbom.cve_check
+    import os
+
+    def os_mkdir(str_dir):
+        if not os.path.exists(os.path.abspath(os.path.dirname(str_dir))):
+            os_mkdir(os.path.abspath(os.path.dirname(str_dir)))
+
+        if not os.path.exists(str_dir):
+            os.mkdir(str_dir)
 
     @contextmanager
     def optional_tarfile(name, guard, mode="w:xz"):
         import tarfile
 
         if guard:
-            name.parent.mkdir(parents=True, exist_ok=True)
+            os_mkdir(os.path.dirname(name))
             with tarfile.open(name=name, mode=mode) as f:
                 yield f
         else:
@@ -431,9 +437,9 @@ python do_create_spdx() {
         packagegroup = package_bb.split('recipes-')[1].split('/')[0]
         return packagegroup
 
-    deploy_dir_spdx = Path(d.getVar("DEPLOY_DIR_SPDX", True))
-    top_dir = Path(d.getVar("TOPDIR", True))
-    spdx_workdir = Path(d.getVar("SPDXWORK", True))
+    deploy_dir_spdx = d.getVar("DEPLOY_DIR_SPDX", True)
+    top_dir = d.getVar("TOPDIR", True)
+    spdx_workdir = d.getVar("SPDXWORK", True)
     include_packaged = d.getVar("SPDX_INCLUDE_PACKAGED", True) == "1"
     include_sources = d.getVar("SPDX_INCLUDE_SOURCES", True) == "1"
     archive_sources = d.getVar("SPDX_ARCHIVE_SOURCES", True) == "1"
@@ -459,7 +465,7 @@ python do_create_spdx() {
     recipe.comment = " PackageGroup: " + get_packagegroup()
     if bb.data.inherits_class("native", d) or bb.data.inherits_class("cross", d):
         recipe.annotations.append(create_annotation(d, "isNative"))
-    recipe.annotations.append(create_annotation(d, "SPDXDIR:%s" % d.getVar("PKGD", True).replace(unicode(top_dir) +'/', '')))
+    recipe.annotations.append(create_annotation(d, "SPDXDIR:%s" % d.getVar("PKGD", True).replace(str(top_dir) +'/', '')))
 
 
     for s in d.getVar('SRC_URI', True).split():
@@ -508,7 +514,7 @@ python do_create_spdx() {
     doc.add_relationship(doc, "DESCRIBES", recipe)
 
     if process_sources(d) and include_sources:
-        recipe_archive = deploy_dir_spdx / "recipes" / (doc.name + ".tar.xz")
+        recipe_archive = deploy_dir_spdx + "/recipes/" + (doc.name + ".tar.xz")
         with optional_tarfile(recipe_archive, archive_sources) as archive:
             spdx_get_src(d)
 
@@ -544,7 +550,7 @@ python do_create_spdx() {
     if not recipe_spdx_is_native(d, recipe):
         bb.build.exec_func("read_subpackage_metadata", d)
 
-        pkgdest = Path(d.getVar("PKGDEST", True))
+        pkgdest = d.getVar("PKGDEST", True)
         for package in d.getVar("PACKAGES", True).split():
             if not oe_sbom.packagedata.packaged(package, d):
                 continue
@@ -590,13 +596,13 @@ python do_create_spdx() {
             package_doc.add_relationship(spdx_package, "GENERATED_FROM", "%s:%s" % (recipe_ref.externalDocumentId, recipe.SPDXID))
             package_doc.add_relationship(package_doc, "DESCRIBES", spdx_package)
 
-            package_archive = deploy_dir_spdx / "packages" / (package_doc.name + ".tar.xz")
+            package_archive = deploy_dir_spdx + "/packages/" + (package_doc.name + ".tar.xz")
             with optional_tarfile(package_archive, archive_packaged) as archive:
                 package_files = add_package_files(
                     d,
                     package_doc,
                     spdx_package,
-                    pkgdest / package,
+                    pkgdest + '/' + package,
                     lambda file_counter: oe_sbom.sbom.get_packaged_file_spdxid(pkg_name, file_counter),
                     lambda filepath: ["BINARY"],
                     archive=archive,
@@ -630,12 +636,11 @@ do_create_spdx[depends] += "${PATCHDEPENDENCY}"
 do_create_spdx[deptask] = "do_create_spdx"
 
 def collect_package_providers(d):
-    from pathlib import Path
     import oe_sbom.sbom
     import oe_sbom.spdx
     import json
 
-    deploy_dir_spdx = Path(d.getVar("DEPLOY_DIR_SPDX", True))
+    deploy_dir_spdx = d.getVar("DEPLOY_DIR_SPDX", True)
 
     providers = {}
 
@@ -668,10 +673,9 @@ python do_create_runtime_spdx() {
     import oe_sbom.sbom
     import oe_sbom.spdx
     import oe_sbom.packagedata
-    from pathlib import Path
 
-    deploy_dir_spdx = Path(d.getVar("DEPLOY_DIR_SPDX", True))
-    spdx_deploy = Path(d.getVar("SPDXRUNTIMEDEPLOY", True))
+    deploy_dir_spdx = d.getVar("DEPLOY_DIR_SPDX", True)
+    spdx_deploy = d.getVar("SPDXRUNTIMEDEPLOY", True)
     is_native = bb.data.inherits_class("native", d) or bb.data.inherits_class("cross", d)
 
     creation_time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -683,7 +687,7 @@ python do_create_runtime_spdx() {
 
         dep_package_cache = {}
 
-        pkgdest = Path(d.getVar("PKGDEST", True))
+        pkgdest = d.getVar("PKGDEST", True)
         for package in d.getVar("PACKAGES", True).split():
             localdata = bb.data.createCopy(d)
 
@@ -707,7 +711,7 @@ python do_create_runtime_spdx() {
             if not oe_sbom.packagedata.packaged(package, localdata):
                 continue
 
-            pkg_spdx_path = deploy_dir_spdx / "packages" / (pkg_name + ".spdx.json")
+            pkg_spdx_path = deploy_dir_spdx + "/packages/" + (pkg_name + ".spdx.json")
 
             package_doc, package_doc_sha1 = oe_sbom.sbom.read_doc(pkg_spdx_path)
 
@@ -759,7 +763,7 @@ python do_create_runtime_spdx() {
                 if dep in dep_package_cache:
                     (dep_spdx_package, dep_package_ref) = dep_package_cache[dep]
                 else:
-                    dep_path = deploy_dir_spdx / "packages" / ("%s.spdx.json" % dep_pkg)
+                    dep_path = deploy_dir_spdx + "/packages/" + ("%s.spdx.json" % dep_pkg)
 
                     spdx_dep_doc, spdx_dep_sha1 = oe_sbom.sbom.read_doc(dep_path)
 
@@ -874,7 +878,6 @@ python image_combine_spdx() {
     import json
     from oe.rootfs import image_list_installed_packages
     from datetime import timezone, datetime
-    from pathlib import Path
     import tarfile
 
     def get_yocto_codename(version):
@@ -889,8 +892,8 @@ python image_combine_spdx() {
     image_name = d.getVar("IMAGE_NAME", True)
     image_link_name = d.getVar("IMAGE_LINK_NAME", True)
 
-    deploy_dir_spdx = Path(d.getVar("DEPLOY_DIR_SPDX", True))
-    imgdeploydir = Path(d.getVar("IMGDEPLOYDIR", True))
+    deploy_dir_spdx = d.getVar("DEPLOY_DIR_SPDX", True)
+    imgdeploydir = d.getVar("IMGDEPLOYDIR", True)
     source_date_epoch = d.getVar("SOURCE_DATE_EPOCH", True)
 
     doc = oe_sbom.spdx.SPDXDocument()
@@ -920,7 +923,7 @@ python image_combine_spdx() {
     packages = image_list_installed_packages(d)
 
     for name in sorted(packages.keys()):
-        pkg_spdx_path = deploy_dir_spdx / "packages" / (name + ".spdx.json")
+        pkg_spdx_path = deploy_dir_spdx + "/packages/" + (name + ".spdx.json")
         pkg_doc, pkg_doc_sha1 = oe_sbom.sbom.read_doc(pkg_spdx_path)
 
         for p in pkg_doc.packages:
@@ -937,7 +940,7 @@ python image_combine_spdx() {
         else:
             bb.fatal("Unable to find package with name '%s' in SPDX file %s" % (name, pkg_spdx_path))
 
-        runtime_spdx_path = deploy_dir_spdx / "runtime" / ("runtime-" + name + ".spdx.json")
+        runtime_spdx_path = deploy_dir_spdx + "/runtime/" + ("runtime-" + name + ".spdx.json")
         runtime_doc, runtime_doc_sha1 = oe_sbom.sbom.read_doc(runtime_spdx_path)
 
         runtime_ref = oe_sbom.spdx.SPDXExternalDocumentRef()
@@ -966,13 +969,13 @@ python image_combine_spdx() {
                 #    doc.files.extend(recipe_spdx["files"])
                 #if 'relationships' in recipe_spdx.keys():
                 #    doc.relationships.extend(recipe_spdx["relationships"])
-    image_spdx_path = imgdeploydir / (image_name + ".spdx.json")
+    image_spdx_path = imgdeploydir + '/' + (image_name + ".spdx.json")
 
-    with image_spdx_path.open("wb") as f:
+    with open(image_spdx_path, "wb") as f:
         doc.to_json(f, sort_keys=True)
 
-    image_spdx_link = imgdeploydir / (image_link_name + ".spdx.json")
-    image_spdx_link.symlink_to(os.path.relpath(image_spdx_path, image_spdx_link.parent))
+    image_spdx_link = imgdeploydir + '/' + (image_link_name + ".spdx.json")
+    os.symlink(os.path.relpath(image_spdx_path, os.path.dirname(image_spdx_link)), image_spdx_link)
 
     num_threads = int(d.getVar("BB_NUMBER_THREADS", True))
 
@@ -980,7 +983,7 @@ python image_combine_spdx() {
 
     index = {"documents": []}
 
-    spdx_tar_path = imgdeploydir / (image_name + ".spdx.tar.xz")
+    spdx_tar_path = imgdeploydir + '/' + (image_name + ".spdx.tar.xz")
     with tarfile.open(name=spdx_tar_path, mode="w:xz") as tar:
         def collect_spdx_document(path, tar, deploy_dir_spdx, source_date_epoch, index):
             #nonlocal tar
@@ -993,7 +996,7 @@ python image_combine_spdx() {
 
             visited_docs.add(path)
 
-            with path.open("rb") as f:
+            with open(path, "rb") as f:
                 doc, sha1 = oe_sbom.sbom.read_doc(f)
                 f.seek(0)
 
@@ -1022,7 +1025,7 @@ python image_combine_spdx() {
                 })
 
             for ref in doc.externalDocumentRefs:
-                ref_path = deploy_dir_spdx / "by-namespace" / ref.spdxDocument.replace("/", "_")
+                ref_path = deploy_dir_spdx + "/by-namespace/" + ref.spdxDocument.replace("/", "_")
                 collect_spdx_document(ref_path, tar, deploy_dir_spdx, source_date_epoch, index)
 
         collect_spdx_document(image_spdx_path, tar, deploy_dir_spdx, source_date_epoch, index)
@@ -1042,13 +1045,13 @@ python image_combine_spdx() {
         tar.addfile(info, fileobj=index_str)
 
     def make_image_link(target_path, suffix):
-        link = imgdeploydir / (image_link_name + suffix)
-        link.symlink_to(os.path.relpath(target_path, link.parent))
+        link = imgdeploydir + '/' + (image_link_name + suffix)
+        os.symlink(os.path.relpath(target_path, os.path.dirname(link)), link)
 
     make_image_link(spdx_tar_path, ".spdx.tar.xz")
 
-    spdx_index_path = imgdeploydir / (image_name + ".spdx.index.json")
-    with spdx_index_path.open("w") as f:
+    spdx_index_path = imgdeploydir + '/' + (image_name + ".spdx.index.json")
+    with open(spdx_index_path, "w") as f:
         json.dump(index, f, sort_keys=True)
 
     make_image_link(spdx_index_path, ".spdx.index.json")

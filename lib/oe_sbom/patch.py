@@ -32,7 +32,7 @@ def runcmd(args, dir = None):
         # print("cwd: %s -> %s" % (olddir, dir))
 
     try:
-        args = [ pipes.quote(unicode(arg)) for arg in args ]
+        args = [ pipes.quote(str(arg)) for arg in args ]
         cmd = " ".join(args)
         # print("cmd: %s" % cmd)
         (exitstatus, output) = oe.utils.getstatusoutput(cmd)
@@ -329,7 +329,7 @@ class GitApplyTree(PatchTree):
             if line.startswith('Subject: '):
                 subject = line.split(':', 1)[1]
                 # Remove any [PATCH][oe-core] etc.
-                subject = re.sub(ur'\[.+?\]\s*', '', subject)
+                subject = re.sub(r'\[.+?\]\s*', '', subject)
                 continue
             elif line.startswith('From: ') or line.startswith('Author: '):
                 authorval = GitApplyTree.decodeAuthor(line)
@@ -449,7 +449,7 @@ class GitApplyTree(PatchTree):
                                 for line in f:
                                     checkline = line
                                     if checkline.startswith('Subject: '):
-                                        checkline = re.sub(ur'\[.+?\]\s*', '', checkline[9:])
+                                        checkline = re.sub(r'\[.+?\]\s*', '', checkline[9:])
                                     if checkline.startswith(GitApplyTree.patch_line_prefix):
                                         outfile = line.split()[-1].strip()
                                         continue
@@ -498,7 +498,7 @@ class GitApplyTree(PatchTree):
         commithook = os.path.join(hooks_dir, 'commit-msg')
         applyhook = os.path.join(hooks_dir, 'applypatch-msg')
         with open(commithook, 'w') as f:
-            # NOTE: the formatting here is significant; if you change it yo'll also need to
+            # NOTE: the formatting here is significant; if you change it you'll also need to
             # change other places which read it back
             f.write('echo >> $1\n')
             f.write('echo "%s: $PATCHFILE" >> $1\n' % GitApplyTree.patch_line_prefix)
@@ -735,7 +735,7 @@ class UserResolver(Resolver):
                 bb.msg.fatal("Build", "T not set")
             bb.utils.mkdirhier(t)
             import random
-            rcfile = "%s/bashrc.%s.%s" % (t, unicode(os.getpid()), random.random())
+            rcfile = "%s/bashrc.%s.%s" % (t, str(os.getpid()), random.random())
             with open(rcfile, "w") as f:
                 f.write("echo '*** Manual patch resolution mode ***'\n")
                 f.write("echo 'Dropping to a shell, so patch rejects can be fixed manually.'\n")

@@ -14,9 +14,9 @@ def packaged(pkg, d):
 def read_pkgdatafile(fn, d):
     pkgdata = {}
 
-    def decode(unicode):
+    def decode(str):
         c = codecs.getdecoder("unicode_escape")
-        return c(unicode)[0]
+        return c(str)[0]
 
     if os.access(fn, os.R_OK):
         import re
@@ -26,12 +26,12 @@ def read_pkgdatafile(fn, d):
         distro_ver = d.getVar("DISTRO_VERSION", True)
         if 'Yocto' in d.getVar("DISTRO_NAME", True):
             if distro_ver[:3] > '3.3':
-                r = re.compile(ur"(^.+?):\s+(.*)")
+                r = re.compile(r"(^.+?):\s+(.*)")
             else:
                 r = re.compile("([^:]+):\s*(.*)")
         elif 'Wind River' in d.getVar("DISTRO_NAME", True):
             if (distro_ver.split('.')[0] == '10') and (distro_ver.split('.')[1] > '21'):
-                r = re.compile(ur"(^.+?):\s+(.*)")
+                r = re.compile(r"(^.+?):\s+(.*)")
             else:
                 r = re.compile("([^:]+):\s*(.*)")
 
