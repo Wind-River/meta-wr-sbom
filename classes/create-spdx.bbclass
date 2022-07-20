@@ -193,6 +193,7 @@ def add_package_files(d, doc, spdx_pkg, topdir, get_spdxid, get_types, **_3to2kw
     import os
     import oe_sbom.spdx
     import hashlib
+    from oe_sbom.utils import sha1_file
 
     source_date_epoch = d.getVar("SOURCE_DATE_EPOCH", True)
     if source_date_epoch:
@@ -232,7 +233,7 @@ def add_package_files(d, doc, spdx_pkg, topdir, get_spdxid, get_types, **_3to2kw
 
                         archive.addfile(info, f)
 
-                sha1 = bb.utils.sha1_file(filepath)
+                sha1 = sha1_file(filepath)
                 sha1s.append(sha1)
                 spdx_file.checksums.append(oe_sbom.spdx.SPDXChecksum(
                         algorithm="SHA1",
