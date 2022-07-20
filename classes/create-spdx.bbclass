@@ -879,7 +879,7 @@ python image_combine_spdx() {
     import oe_sbom.sbom
     import io
     import json
-    from oe.rootfs import image_list_installed_packages
+    from oe_sbom.rootfs import image_list_installed_packages
     from datetime import datetime
     from pytz import timezone
     import tarfile
