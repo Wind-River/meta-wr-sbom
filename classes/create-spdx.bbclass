@@ -418,7 +418,7 @@ python do_create_spdx() {
             os.mkdir(str_dir)
 
     @contextmanager
-    def optional_tarfile(name, guard, mode="w:xz"):
+    def optional_tarfile(name, guard, mode="w:gz"):
         import tarfile
 
         if guard:
@@ -516,7 +516,7 @@ python do_create_spdx() {
     doc.add_relationship(doc, "DESCRIBES", recipe)
 
     if process_sources(d) and include_sources:
-        recipe_archive = deploy_dir_spdx + "/recipes/" + (doc.name + ".tar.xz")
+        recipe_archive = deploy_dir_spdx + "/recipes/" + (doc.name + ".tar.gz")
         with optional_tarfile(recipe_archive, archive_sources) as archive:
             spdx_get_src(d)
 
@@ -598,7 +598,7 @@ python do_create_spdx() {
             package_doc.add_relationship(spdx_package, "GENERATED_FROM", "%s:%s" % (recipe_ref.externalDocumentId, recipe.SPDXID))
             package_doc.add_relationship(package_doc, "DESCRIBES", spdx_package)
 
-            package_archive = deploy_dir_spdx + "/packages/" + (package_doc.name + ".tar.xz")
+            package_archive = deploy_dir_spdx + "/packages/" + (package_doc.name + ".tar.gz")
             with optional_tarfile(package_archive, archive_packaged) as archive:
                 package_files = add_package_files(
                     d,
@@ -987,8 +987,8 @@ python image_combine_spdx() {
 
     index = {"documents": []}
 
-    spdx_tar_path = imgdeploydir + '/' + (image_name + ".spdx.tar.xz")
-    with tarfile.open(name=spdx_tar_path, mode="w:xz") as tar:
+    spdx_tar_path = imgdeploydir + '/' + (image_name + ".spdx.tar.gz")
+    with tarfile.open(name=spdx_tar_path, mode="w:gz") as tar:
         def collect_spdx_document(path, tar, deploy_dir_spdx, source_date_epoch, index):
             #nonlocal tar
             #nonlocal deploy_dir_spdx
@@ -1052,7 +1052,7 @@ python image_combine_spdx() {
         link = imgdeploydir + '/' + (image_link_name + suffix)
         os.symlink(os.path.relpath(target_path, os.path.dirname(link)), link)
 
-    make_image_link(spdx_tar_path, ".spdx.tar.xz")
+    make_image_link(spdx_tar_path, ".spdx.tar.gz")
 
     spdx_index_path = imgdeploydir + '/' + (image_name + ".spdx.index.json")
     with open(spdx_index_path, "w") as f:
