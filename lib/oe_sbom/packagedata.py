@@ -31,6 +31,11 @@ def read_pkgdatafile(fn, d):
                 r = re.compile(r"(^.+?):\s+(.*)")
             else:
                 r = re.compile("([^:]+):\s*(.*)")
+        else:
+            if d.getVar("DISTRO_VERSION_BASE", True) > '3.3':
+                r = re.compile(r"(^.+?):\s+(.*)")
+            else:
+                r = re.compile("([^:]+):\s*(.*)")
 
         for l in lines:
             m = r.match(l)
@@ -82,6 +87,16 @@ def read_subpkgdata_dict(pkg, d):
                 newvar = var.replace("_" + pkg, "")
                 if newvar == var and var + "_" + pkg in subd:
                     continue
+        else:
+            if d.getVar("DISTRO_VERSION_BASE", True) > '3.3':
+                newvar = var.replace("_" + pkg, "")
+                if newvar == var and var + "_" + pkg in subd:
+                    continue
+            else:
+                newvar = var.replace("_" + pkg, "")
+                if newvar == var and var + "_" + pkg in subd:
+                    continue
+
         ret[newvar] = subd[var]
     return ret
 

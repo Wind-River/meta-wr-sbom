@@ -551,6 +551,11 @@ python do_create_spdx() {
                     pkg_name = d.getVar("PKG:%s" % package, True) or package
                 else:
                     pkg_name = d.getVar("PKG_%s" % package, True) or package
+            else:
+                if d.getVar("DISTRO_VERSION_BASE", True) > '3.0':
+                    pkg_name = d.getVar("PKG:%s" % package, True) or package
+                else:
+                   pkg_name = d.getVar("PKG_%s" % package, True) or package
 
             package_doc.name = pkg_name
             package_doc.documentNamespace = get_doc_namespace(d, package_doc)
@@ -679,6 +684,11 @@ python do_create_runtime_spdx() {
                 if (distro_ver.split('.')[0] == '10') and (int(distro_ver.split('.')[1]) > 21):
                     pkg_name = d.getVar("PKG:%s" % package, True) or package
                 elif (distro_ver.split('.')[0] == '10') and (distro_ver.split('.')[1] == '21') and (int(distro_ver.split('.')[3]) >= 5):
+                    pkg_name = d.getVar("PKG:%s" % package, True) or package
+                else:
+                    pkg_name = d.getVar("PKG_%s" % package, True) or package
+            else:
+                if d.getVar("DISTRO_VERSION_BASE", True) > '3.0':
                     pkg_name = d.getVar("PKG:%s" % package, True) or package
                 else:
                     pkg_name = d.getVar("PKG_%s" % package, True) or package
