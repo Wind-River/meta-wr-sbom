@@ -740,6 +740,9 @@ python do_create_runtime_spdx() {
                 if dep in seen_deps:
                     continue
 
+                if dep not in providers.keys():
+                    continue
+
                 dep = providers[dep]
 
                 if not oe_sbom.packagedata.packaged(dep, localdata):
@@ -752,6 +755,9 @@ python do_create_runtime_spdx() {
                     (dep_spdx_package, dep_package_ref) = dep_package_cache[dep]
                 else:
                     dep_path = deploy_dir_spdx / "packages" / ("%s.spdx.json" % dep_pkg)
+
+                    if not os.path.exists(dep_path):
+                        continue
 
                     spdx_dep_doc, spdx_dep_sha1 = oe_sbom.sbom.read_doc(dep_path)
 
@@ -907,6 +913,8 @@ python image_combine_spdx() {
 
     for name in sorted(packages.keys()):
         pkg_spdx_path = deploy_dir_spdx / "packages" / (name + ".spdx.json")
+        if not os.path.exists(pkg_spdx_path):
+            continue
         pkg_doc, pkg_doc_sha1 = oe_sbom.sbom.read_doc(pkg_spdx_path)
 
         for p in pkg_doc.packages:
