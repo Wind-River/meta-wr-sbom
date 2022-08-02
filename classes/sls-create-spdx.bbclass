@@ -603,7 +603,7 @@ python do_create_spdx() {
                     str(pkgdest / package),
                     lambda file_counter: oe_sbom.sbom.get_packaged_file_spdxid(pkg_name, file_counter),
                     lambda filepath: ["BINARY"],
-                    ignore_dirs=["DEBIAN"],
+                    ignore_dirs=['CONTROL', 'DEBIAN'],
                     archive=archive,
                 )
 
