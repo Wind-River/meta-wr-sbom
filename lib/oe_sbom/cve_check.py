@@ -71,15 +71,7 @@ def get_patched_cves(d):
     """
 
     import re
-    if ('Yocto' in d.getVar("DISTRO_NAME", True)) and (d.getVar("DISTRO_VERSION", True)[:3] > '2.2'):
-        import oe.patch
-        patches_list = oe.patch.src_patches(d)
-    elif ('Wind River' in d.getVar("DISTRO_NAME", True)) and (int(d.getVar("DISTRO_VERSION", True).split('.')[0]) > 9):
-        import oe.patch
-        patches_list = oe.patch.src_patches(d)
-    else:
-        import oe_sbom.patch
-        patches_list = oe_sbom.patch.src_patches(d)
+    import oe_sbom.patch
 
     pn = d.getVar("PN", True)
     cve_match = re.compile("CVE:( CVE\-\d{4}\-\d+)+")
@@ -94,7 +86,7 @@ def get_patched_cves(d):
 
     patched_cves = set()
     bb.debug(2, "Looking for patches that solves CVEs for %s" % pn)
-    for url in patches_list:
+    for url in oe_sbom.patch.src_patches(d):
         patch_file = bb.fetch.decodeurl(url)[2]
 
         if not os.path.isfile(patch_file):

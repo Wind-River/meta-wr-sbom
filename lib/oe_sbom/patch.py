@@ -1,4 +1,10 @@
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
 import oe.path
+import oe.types
+import subprocess
 
 class NotFoundError(bb.BBHandledException):
     def __init__(self, path):
@@ -32,14 +38,24 @@ def runcmd(args, dir = None):
         args = [ pipes.quote(str(arg)) for arg in args ]
         cmd = " ".join(args)
         # print("cmd: %s" % cmd)
-        (exitstatus, output) = oe.utils.getstatusoutput(cmd)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        stdout, stderr = proc.communicate()
+        stdout = stdout.decode('utf-8')
+        stderr = stderr.decode('utf-8')
+        exitstatus = proc.returncode
         if exitstatus != 0:
-            raise CmdError(cmd, exitstatus >> 8, output)
-        return output
+            raise CmdError(cmd, exitstatus >> 8, "stdout: %s\nstderr: %s" % (stdout, stderr))
+        if " fuzz " in stdout and "Hunk " in stdout:
+            # Drop patch fuzz info with header and footer to log file so
+            # insane.bbclass can handle to throw error/warning
+            bb.note("--- Patch fuzz start ---\n%s\n--- Patch fuzz end ---" % format(stdout))
+
+        return stdout
 
     finally:
         if dir:
             os.chdir(olddir)
+
 
 class PatchError(Exception):
     def __init__(self, msg):
@@ -211,7 +227,7 @@ class PatchTree(PatchSet):
         self.patches.insert(i, patch)
 
     def _applypatch(self, patch, force = False, reverse = False, run = True):
-        shellcmd = ["cat", patch['file'], "|", "patch", "-p", patch['strippath']]
+        shellcmd = ["cat", patch['file'], "|", "patch", "--no-backup-if-mismatch", "-p", patch['strippath']]
         if reverse:
             shellcmd.append('-R')
 
@@ -283,6 +299,19 @@ class GitApplyTree(PatchTree):
         PatchTree.__init__(self, dir, d)
         self.commituser = d.getVar('PATCH_GIT_USER_NAME', True)
         self.commitemail = d.getVar('PATCH_GIT_USER_EMAIL', True)
+        if not self._isInitialized():
+            self._initRepo()
+
+    def _isInitialized(self):
+        cmd = "git rev-parse --show-toplevel"
+        (status, output) = subprocess.getstatusoutput(cmd.split())
+        ## Make sure repo is in builddir to not break top-level git repos
+        return status == 0 and os.path.samedir(output, self.dir)
+
+    def _initRepo(self):
+        runcmd("git init".split(), self.dir)
+        runcmd("git add .".split(), self.dir)
+        runcmd("git commit -a --allow-empty -m Patching_started".split(), self.dir)
 
     @staticmethod
     def extractPatchHeader(patchfile):
@@ -316,8 +345,8 @@ class GitApplyTree(PatchTree):
     @staticmethod
     def interpretPatchHeader(headerlines):
         import re
-        author_re = re.compile('[\S ]+ <\S+@\S+\.\S+>')
-        from_commit_re = re.compile('^From [a-z0-9]{40} .*')
+        author_re = re.compile(r'[\S ]+ <\S+@\S+\.\S+>')
+        from_commit_re = re.compile(r'^From [a-z0-9]{40} .*')
         outlines = []
         author = None
         date = None
@@ -405,7 +434,7 @@ class GitApplyTree(PatchTree):
                     date = newdate
                 if not subject:
                     subject = newsubject
-        if subject and outlines and not outlines[0].strip() == subject:
+        if subject and not (outlines and outlines[0].strip() == subject):
             outlines.insert(0, '%s\n\n' % subject.strip())
 
         # Write out commit message to a file
@@ -428,10 +457,9 @@ class GitApplyTree(PatchTree):
     def extractPatches(tree, startcommit, outdir, paths=None):
         import tempfile
         import shutil
-        import re
         tempdir = tempfile.mkdtemp(prefix='oepatch')
         try:
-            shellcmd = ["git", "format-patch", startcommit, "-o", tempdir]
+            shellcmd = ["git", "format-patch", "--no-signature", "--no-numbered", startcommit, "-o", tempdir]
             if paths:
                 shellcmd.append('--')
                 shellcmd.extend(paths)
@@ -444,13 +472,10 @@ class GitApplyTree(PatchTree):
                         try:
                             with open(srcfile, 'r', encoding=encoding) as f:
                                 for line in f:
-                                    checkline = line
-                                    if checkline.startswith('Subject: '):
-                                        checkline = re.sub(r'\[.+?\]\s*', '', checkline[9:])
-                                    if checkline.startswith(GitApplyTree.patch_line_prefix):
+                                    if line.startswith(GitApplyTree.patch_line_prefix):
                                         outfile = line.split()[-1].strip()
                                         continue
-                                    if checkline.startswith(GitApplyTree.ignore_commit_prefix):
+                                    if line.startswith(GitApplyTree.ignore_commit_prefix):
                                         continue
                                     patchlines.append(line)
                         except UnicodeDecodeError:
@@ -497,8 +522,7 @@ class GitApplyTree(PatchTree):
         with open(commithook, 'w') as f:
             # NOTE: the formatting here is significant; if you change it you'll also need to
             # change other places which read it back
-            f.write('echo >> $1\n')
-            f.write('echo "%s: $PATCHFILE" >> $1\n' % GitApplyTree.patch_line_prefix)
+            f.write('echo "\n%s: $PATCHFILE" >> $1' % GitApplyTree.patch_line_prefix)
         os.chmod(commithook, 0o755)
         shutil.copy2(commithook, applyhook)
         try:
@@ -506,7 +530,7 @@ class GitApplyTree(PatchTree):
             try:
                 shellcmd = [patchfilevar, "git", "--work-tree=%s" % reporoot]
                 self.gitCommandUserOptions(shellcmd, self.commituser, self.commitemail)
-                shellcmd += ["am", "-3", "--keep-cr", "-p%s" % patch['strippath']]
+                shellcmd += ["am", "-3", "--keep-cr", "--no-scissors", "-p%s" % patch['strippath']]
                 return _applypatchhelper(shellcmd, patch, force, reverse, run)
             except CmdError:
                 # Need to abort the git am, or we'll still be within it at the end
@@ -772,9 +796,11 @@ class UserResolver(Resolver):
 
 
 def patch_path(url, fetch, workdir, expand=True):
-    """Return the local path of a patch, or None if this isn't a patch"""
+    """Return the local path of a patch, or return nothing if this isn't a patch"""
 
     local = fetch.localpath(url)
+    if os.path.isdir(local):
+        return
     base, ext = os.path.splitext(os.path.basename(local))
     if ext in ('.gz', '.bz2', '.xz', '.Z'):
         if expand:
@@ -838,6 +864,7 @@ def src_patches(d, all=False, expand=True):
 
 
 def should_apply(parm, d):
+    import bb.utils
     if "mindate" in parm or "maxdate" in parm:
         pn = d.getVar('PN', True)
         srcdate = d.getVar('SRCDATE_%s' % pn, True)
@@ -873,6 +900,16 @@ def should_apply(parm, d):
         srcrev = d.getVar('SRCREV', True)
         if srcrev and parm["notrev"] in srcrev:
             return False, "doesn't apply to revision"
+
+    if "maxver" in parm:
+        pv = d.getVar('PV', True)
+        if bb.utils.vercmp_string_op(pv, parm["maxver"], ">"):
+            return False, "applies to earlier version"
+
+    if "minver" in parm:
+        pv = d.getVar('PV', True)
+        if bb.utils.vercmp_string_op(pv, parm["minver"], "<"):
+            return False, "applies to later version"
 
     return True, None
 
