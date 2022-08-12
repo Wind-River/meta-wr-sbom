@@ -3,7 +3,7 @@ This template adds support for generating a Software Bill of Materials
 
 To use this template, add the following to your setup line:
 
-    --templates feature/sbom --layers wr-sbom
+    --templates feature/sbom --layers meta-wr-sbom
 
 #@TYPE: Wrtemplate
 #@NAME: sbom
