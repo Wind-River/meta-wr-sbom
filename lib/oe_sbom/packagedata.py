@@ -21,18 +21,13 @@ def read_pkgdatafile(fn, d):
             lines = f.readlines()
 
         distro_ver = d.getVar("DISTRO_VERSION", True)
-        if 'Yocto' in d.getVar("DISTRO_NAME", True):
-            if distro_ver[:3] > '3.3':
-                r = re.compile(r"(^.+?):\s+(.*)")
-            else:
-                r = re.compile("([^:]+):\s*(.*)")
-        elif 'Wind River' in d.getVar("DISTRO_NAME", True):
+        if 'Wind River' in d.getVar("DISTRO_NAME", True):
             if (distro_ver.split('.')[0] == '10') and (distro_ver.split('.')[1] > '21'):
                 r = re.compile(r"(^.+?):\s+(.*)")
             else:
                 r = re.compile("([^:]+):\s*(.*)")
         else:
-            if d.getVar("DISTRO_VERSION_BASE", True) > '3.3':
+            if d.getVar("BB_VERSION", True) > '1.50.0':
                 r = re.compile(r"(^.+?):\s+(.*)")
             else:
                 r = re.compile("([^:]+):\s*(.*)")
@@ -69,15 +64,6 @@ def read_subpkgdata_dict(pkg, d):
     subd = read_pkgdatafile(get_subpkgedata_fn(pkg, d), d)
     for var in subd:
         distro_ver = d.getVar("DISTRO_VERSION", True)
-        if 'Yocto' in d.getVar("DISTRO_NAME", True):
-            if distro_ver[:3] > '3.3':
-                newvar = var.replace(":" + pkg, "")
-                if newvar == var and var + ":" + pkg in subd:
-                    continue
-            else:
-                newvar = var.replace("_" + pkg, "")
-                if newvar == var and var + "_" + pkg in subd:
-                    continue
         if 'Wind River' in d.getVar("DISTRO_NAME", True):
             if (distro_ver.split('.')[0] == '10') and (distro_ver.split('.')[1] > '21'):
                 newvar = var.replace(":" + pkg, "")
@@ -88,8 +74,8 @@ def read_subpkgdata_dict(pkg, d):
                 if newvar == var and var + "_" + pkg in subd:
                     continue
         else:
-            if d.getVar("DISTRO_VERSION_BASE", True) > '3.3':
-                newvar = var.replace("_" + pkg, "")
+            if d.getVar("BB_VERSION", True) > '1.50.0':
+                newvar = var.replace(":" + pkg, "")
                 if newvar == var and var + "_" + pkg in subd:
                     continue
             else:
