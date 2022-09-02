@@ -897,7 +897,7 @@ python image_combine_spdx() {
     image_link_name = d.getVar("IMAGE_LINK_NAME", True)
 
     deploy_dir_spdx = d.getVar("DEPLOY_DIR_SPDX", True)
-    imgdeploydir = d.getVar("IMGDEPLOYDIR", True)
+    imgdeploydir = d.getVar("DEPLOY_DIR_IMAGE", True)
     source_date_epoch = d.getVar("SOURCE_DATE_EPOCH", True)
 
     doc = oe_sbom.spdx.SPDXDocument()
@@ -975,12 +975,13 @@ python image_combine_spdx() {
                 #    doc.relationships.extend(recipe_spdx["relationships"])
     image_spdx_path = imgdeploydir + '/' + (image_name + ".spdx.json")
 
-    with open(image_spdx_path, "wb") as f:
-        doc.to_json(f, sort_keys=True)
+    oe_sbom.sbom.write_doc(d, doc, "", imgdeploydir)
 
     image_spdx_link = imgdeploydir + '/' + (image_link_name + ".spdx.json")
-    os.symlink(os.path.relpath(image_spdx_path, os.path.dirname(image_spdx_link)), image_spdx_link)
 
+    if os.path.exists(image_spdx_link):
+        os.remove(image_spdx_link)
+    os.link(image_spdx_path, image_spdx_link)
     num_threads = int(d.getVar("BB_NUMBER_THREADS", True))
 
     visited_docs = set()
