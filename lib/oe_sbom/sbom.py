@@ -65,7 +65,7 @@ def read_doc(fn):
 
     @contextlib.contextmanager
     def get_file():
-        if isinstance(fn, io.IOBase):
+        if isinstance(fn, file):
             yield fn
         else:
             with open(fn, "rb") as f:
