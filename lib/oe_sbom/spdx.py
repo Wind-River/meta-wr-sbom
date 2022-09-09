@@ -282,7 +282,7 @@ class SPDXDocument(SPDXObject):
     def __init__(self, **d):
         super().__init__(**d)
 
-    def to_json(self, f, *, sort_keys=False, indent=None, separators=None):
+    def to_json(self, f, *, sort_keys=False, indent=2, separators=None):
         class Encoder(json.JSONEncoder):
             def default(self, o):
                 if isinstance(o, SPDXObject):

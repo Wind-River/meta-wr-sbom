@@ -1037,7 +1037,7 @@ python image_combine_spdx() {
 
     spdx_index_path = imgdeploydir / (image_name + ".spdx.index.json")
     with spdx_index_path.open("w") as f:
-        json.dump(index, f, sort_keys=True)
+        json.dump(index, f, indent=2, sort_keys=True)
 
     make_image_link(spdx_index_path, ".spdx.index.json")
 }
