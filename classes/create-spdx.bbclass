@@ -891,7 +891,11 @@ python image_combine_spdx() {
     elif 'Wind River' in d.getVar("DISTRO_NAME", True):
         doc.comment = "DISTRO: " + "WRLinux-" + d.getVar("DISTRO_VERSION", True) + "  ARCH: " + d.getVar("MACHINE_ARCH", True)
     else:
-        doc.comment = "DISTRO: " + d.getVar("DISTRO_VERSION", True) + "  ARCH: " + d.getVar("MACHINE_ARCH", True)
+        D_name = d.getVar("DISTRO_NAME", True).strip().replace(" ", "_")
+        if D_name:
+            doc.comment = "DISTRO: " + D_name + '-' + d.getVar("DISTRO_VERSION", True) + "  ARCH: " + d.getVar("MACHINE_ARCH", True)
+        else:
+            doc.comment = "DISTRO: Unknown-" + d.getVar("DISTRO_VERSION", True) + "  ARCH: " + d.getVar("MACHINE_ARCH", True)
     doc.documentDescribes.append("SPDXRef-Image-" + d.getVar("IMAGE_NAME", True))
 
     image = oe_sbom.spdx.SPDXPackage()
