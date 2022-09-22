@@ -24,7 +24,7 @@ The meta-wr-sbom OpenEmbedded/Yocto layer is used to generate Software Bill of M
 
 ----------------------------------------------------------------------------------------
 # Requirements
-The package of Python 3 version >= 3.7 must be installed on build host.
+The package of Python 2 version >= 2.7.5 must be installed on build host.
 
 
 ----------------------------------------------------------------------------------------
@@ -32,7 +32,7 @@ The package of Python 3 version >= 3.7 must be installed on build host.
 ## Getting meta-wr-sbom
 Clone the meta-wr-sbom repository (or unpack an archive of it) into the top-level directory of your yocto build project:
 ```bash
-git clone ssh://git@bitbucket.wrs.com:7999/ccm-ps/meta-wr-sbom.git -b main
+git clone https://github.com/Wind-River/meta-wr-sbom -b wrlinux-8
 ```
 
 ## Adding the meta-wr-sbom layer to Your Build
