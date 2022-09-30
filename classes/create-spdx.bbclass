@@ -623,6 +623,7 @@ addtask do_create_spdx after do_package do_packagedata do_unpack before do_build
 SSTATETASKS += "do_create_spdx"
 do_create_spdx[sstate-inputdirs] = "${SPDXDEPLOY}"
 do_create_spdx[sstate-outputdirs] = "${DEPLOY_DIR_SPDX}"
+do_create_spdx[sstate-name] = "create_spdx"
 
 python do_create_spdx_setscene () {
     #from __future__ import with_statement
@@ -801,6 +802,7 @@ addtask do_create_runtime_spdx after do_create_spdx before do_build do_rm_work
 SSTATETASKS += "do_create_runtime_spdx"
 do_create_runtime_spdx[sstate-inputdirs] = "${SPDXRUNTIMEDEPLOY}"
 do_create_runtime_spdx[sstate-outputdirs] = "${DEPLOY_DIR_SPDX}"
+do_create_runtime_spdx[sstate-name] = "create_runtime_spdx"
 
 python do_create_runtime_spdx_setscene () {
     #from __future__ import with_statement
