@@ -1,3 +1,9 @@
+#
+# Copyright OpenEmbedded Contributors
+#
+# SPDX-License-Identifier: MIT
+#
+
 from __future__ import with_statement
 from __future__ import absolute_import
 import collections

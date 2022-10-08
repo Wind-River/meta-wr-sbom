@@ -1,4 +1,8 @@
-
+#
+# Copyright OpenEmbedded Contributors
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
 def sha1_file(filename):
     """
     Return the hex string representation of the SHA1 checksum of the filename
