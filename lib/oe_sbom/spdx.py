@@ -290,7 +290,7 @@ class SPDXDocument(SPDXObject):
         if 'separators' in _3to2kwargs: separators = _3to2kwargs['separators']; del _3to2kwargs['separators']
         else: separators = None
         if 'indent' in _3to2kwargs: indent = _3to2kwargs['indent']; del _3to2kwargs['indent']
-        else: indent = None
+        else: indent = 2
         if 'sort_keys' in _3to2kwargs: sort_keys = _3to2kwargs['sort_keys']; del _3to2kwargs['sort_keys']
         else: sort_keys = False
         class Encoder(json.JSONEncoder):
