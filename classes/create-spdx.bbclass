@@ -443,7 +443,10 @@ python do_create_spdx() {
 
     recipe = oe_sbom.spdx.SPDXPackage()
     recipe.name = d.getVar("PN", True)
-    recipe.versionInfo = get_version_from_PV(d.getVar("PV", True))
+    if d.getVar("SLS_EXTEND_VERSION", True):
+        recipe.versionInfo = d.getVar("PV", True) + "-" + d.getVar("SLS_EXTEND_VERSION", True)
+    else:
+        recipe.versionInfo = d.getVar("PV", True)
     recipe.SPDXID = oe_sbom.sbom.get_recipe_spdxid(d)
     recipe.comment = " PackageGroup: " + get_packagegroup()
     if bb.data.inherits_class("native", d) or bb.data.inherits_class("cross", d):
