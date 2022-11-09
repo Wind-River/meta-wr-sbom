@@ -14,7 +14,7 @@ The meta-wr-sbom OpenEmbedded/Yocto layer is used to generate Software Bill of M
 - [Yocto Project 3.2 (Gatesgarth)](https://lists.yoctoproject.org/g/yocto/message/51262)  
 - [Yocto Project 3.3 (Hardknott)](https://lists.yoctoproject.org/g/yocto-announce/message/215)  
 - [Yocto Project 3.4 (Honister)](https://lists.yoctoproject.org/g/yocto-announce/message/229)  
-- Yocto Project 4.0 (Kirkstone)	  
+- [Yocto Project 4.0 (Kirkstone)](https://lists.yoctoproject.org/g/yocto/message/56902)	  
 - [Wind River Linux 9](https://docs.windriver.com/category/os-wind_river_linux_9)
 - [Wind River Linux LTS17](https://docs.windriver.com/category/os_linux_lts_17)
 - [Wind River Linux LTS18](https://docs.windriver.com/category/os_linux_lts_18)
