@@ -153,6 +153,22 @@ def convert_license_to_spdx(lic, document, d, existing={}):
 
     return ' '.join(convert(l) for l in lic_split)
 
+def get_final_pkg_name(d, package):
+    distro_ver = d.getVar("DISTRO_VERSION", True)
+    if 'Wind River' in d.getVar("DISTRO_NAME", True):
+        if (distro_ver.split('.')[0] == '10') and (int(distro_ver.split('.')[1]) > 21):
+            pkg_name = d.getVar("PKG:%s" % package, True) or package
+        elif (distro_ver.split('.')[0] == '10') and (distro_ver.split('.')[1] == '21') and (int(distro_ver.split('.')[3]) >= 5):
+            pkg_name = d.getVar("PKG:%s" % package, True) or package
+        else:
+            pkg_name = d.getVar("PKG_%s" % package, True) or package
+    else:
+        if d.getVar("BB_VERSION", True) > '1.50.0':
+            pkg_name = d.getVar("PKG:%s" % package, True) or package
+        else:
+            pkg_name = d.getVar("PKG_%s" % package, True) or package
+    return pkg_name
+
 def process_sources(d):
     pn = d.getVar('PN', True)
     assume_provided = (d.getVar("ASSUME_PROVIDED", True) or "").split()
@@ -543,19 +559,7 @@ python do_create_spdx() {
 
             package_doc = oe_sbom.spdx.SPDXDocument()
 
-            distro_ver = d.getVar("DISTRO_VERSION", True)
-            if 'Wind River' in d.getVar("DISTRO_NAME", True):
-                if (distro_ver.split('.')[0] == '10') and (int(distro_ver.split('.')[1]) > 21):
-                    pkg_name = d.getVar("PKG:%s" % package, True) or package
-                elif (distro_ver.split('.')[0] == '10') and (distro_ver.split('.')[1] == '21') and (int(distro_ver.split('.')[3]) >= 5):
-                    pkg_name = d.getVar("PKG:%s" % package, True) or package
-                else:
-                    pkg_name = d.getVar("PKG_%s" % package, True) or package
-            else:
-                if d.getVar("BB_VERSION", True) > '1.50.0':
-                    pkg_name = d.getVar("PKG:%s" % package, True) or package
-                else:
-                   pkg_name = d.getVar("PKG_%s" % package, True) or package
+            pkg_name = get_final_pkg_name(d, package)
 
             package_doc.name = pkg_name
             package_doc.documentNamespace = get_doc_namespace(d, package_doc)
@@ -674,19 +678,7 @@ python do_create_runtime_spdx() {
         for package in d.getVar("PACKAGES", True).split():
             localdata = bb.data.createCopy(d)
 
-            distro_ver = d.getVar("DISTRO_VERSION", True)
-            if 'Wind River' in d.getVar("DISTRO_NAME", True):
-                if (distro_ver.split('.')[0] == '10') and (int(distro_ver.split('.')[1]) > 21):
-                    pkg_name = d.getVar("PKG:%s" % package, True) or package
-                elif (distro_ver.split('.')[0] == '10') and (distro_ver.split('.')[1] == '21') and (int(distro_ver.split('.')[3]) >= 5):
-                    pkg_name = d.getVar("PKG:%s" % package, True) or package
-                else:
-                    pkg_name = d.getVar("PKG_%s" % package, True) or package
-            else:
-                if d.getVar("BB_VERSION", True) > '1.50.0':
-                    pkg_name = d.getVar("PKG:%s" % package, True) or package
-                else:
-                    pkg_name = d.getVar("PKG_%s" % package, True) or package
+            pkg_name = get_final_pkg_name(d, package)
 
             localdata.setVar("PKG", pkg_name)
             localdata.setVar('OVERRIDES', d.getVar("OVERRIDES", False) + ":" + package)
