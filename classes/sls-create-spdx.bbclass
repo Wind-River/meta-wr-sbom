@@ -924,6 +924,13 @@ python image_combine_spdx() {
         else:
             bb.fatal("Unable to find package with name '%s' in SPDX file %s" % (name, pkg_spdx_path))
 
+        for r in pkg_doc.relationships:
+            if r.relationshipType == "GENERATED_FROM":
+                 doc.relationships.append(r)
+                 break
+        else:
+             bb.fatal("Unable to find GENERATED_FROM relationship in SPDX file %s" %  pkg_spdx_path)
+
         runtime_spdx_path = deploy_dir_spdx / "runtime" / ("runtime-" + name + ".spdx.json")
         runtime_doc, runtime_doc_sha1 = oe_sbom.sbom.read_doc(runtime_spdx_path)
 
