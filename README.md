@@ -1,10 +1,8 @@
-# sls-create-spdx.bbclass
-
-## Overview
+# Overview
 The meta-wr-sbom OpenEmbedded/Yocto layer is used to generate Software Bill of Materials (SBOM) of [Software Package Data Exchange (SPDX)](https://spdx.org/tools) format for Yocto-based projects. The SBOM file created by the layer using SPDX v2.2 specification will include accurate identification of software components, explicit mapping of relationships between components, and the association of security and licensing information with each component.
 
 ----------------------------------------------------------------------------------------
-## Supported Yocto Project Versions
+# Supported Yocto Project Versions
 - [Yocto Project 2.2 (Morty)](https://www.yoctoproject.org/pipermail/yocto-announce/2016-November/000101.html)  
 - [Yocto Project 2.3 (Pyro)](https://lists.yoctoproject.org/pipermail/yocto-announce/2017-May/000112.html)  
 - [Yocto Project 2.4 (Rocko)](https://lists.yoctoproject.org/pipermail/yocto-announce/2017-October/000125.html)   
@@ -25,64 +23,60 @@ The meta-wr-sbom OpenEmbedded/Yocto layer is used to generate Software Bill of M
 
 
 ----------------------------------------------------------------------------------------
-## Requirements
+# Requirements
 The package of Python 3 version >= 3.7 must be installed on build host.
 
 
 ----------------------------------------------------------------------------------------
-## Quick Start
-### Getting meta-wr-sbom
+# Quick Start
+## Getting meta-wr-sbom
 Clone the meta-wr-sbom repository (or unpack an archive of it) into the top-level directory of your yocto build project:
 ```bash
 git clone https://github.com/Wind-River/meta-wr-sbom -b main
 ```
 
-### Adding the meta-wr-sbom layer to Your Build
+## Adding the meta-wr-sbom layer to Your Build
 At the top-level directory of your yocto build workspace, you can add the meta-wr-sbom layer to the build system by performing the following command:
 ```bash
 source ../meta-wr-sbom/init_create_sbom
 ```
 
-### Generating SBOM File
+## Generating SBOM File
 ```bash
 bitbake ${image_name}
 ```
 
-The SBOM file of your yocto project will be generated at  **tmp/deploy/images/${machine}/${image_name}.spdx.json**.   
+The SBOM file of your yocto project will be generated as  **tmp/deploy/images/${machine}/${image_name}.spdx.json**.   
 ***************************************************************************************
 
-# gen_manifest.py
-
-## Overview
-The gen_manifest.py script use to generate Wind River Linux project package list. The package list is output to json format.
-
-## Supported WRLinux Versions
-- [Wind River Linux 3]
+# Supported Old  Wind River Linux Versions
+- Wind River Linux 3
 - [Wind River Linux 4](https://docs.windriver.com/category/os-wind_river_linux_4)
 - [Wind River Linux 5](https://docs.windriver.com/category/os-wind_river_linux_5)
 - [Wind River Linux 6](https://docs.windriver.com/category/os-wind_river_linux_6)
 - [Wind River Linux 7](https://docs.windriver.com/category/os-wind_river_linux_7)
 - [Wind River Linux 8](https://docs.windriver.com/category/os-wind_river_linux_8)
-- [Wind River Linux 9](https://docs.windriver.com/category/os-wind_river_linux_9)
-- [Wind River Linux LTS17](https://docs.windriver.com/category/os_linux_lts_17)
-- [Wind River Linux LTS18](https://docs.windriver.com/category/os_linux_lts_18)
-- [Wind River Linux LTS19](https://docs.windriver.com/category/os_linux_lts_19)
-- [Wind River Linux LTS21](https://docs.windriver.com/category/os_linux_lts_21)
-- [Wind River Linux LTS22](https://docs.windriver.com/category/os_linux_lts_22)
 
 ----------------------------------------------------------------------------------------
-## Dependency
-- Python 2.7 or later version is required to be installed on build host.
-- The project had fully build before run the script.
+# Requirements
+Python 2.7 or later version is required to be installed on build host.
 
-## Script Usage
+# Quick Start
+Fully build your project.
+
+## Getting meta-wr-sbom
+Clone the meta-wr-sbom repository (or unpack an archive of it) into the top-level directory of your project:
 ```bash
-cd meta-wr-sbom
-python tool/gen_manifest.py /path/to/the/project
+git clone https://github.com/Wind-River/meta-wr-sbom -b main
 ```
 
-The project directory is the folder where [config.log] file and [Makefile] file located, or the parent path of the [build] directory.
+## Generating SBOM File
+At the top-level directory of your project directory, perform the following command:
+```bash
+python meta-wr-sbom/tool/gen_manifest.py .
+```
 
+The SBOM file of your project will be generated as  **meta-wr-sbom/tool/${image_name}.spdx.json**.   
 
 # Legal Notices
 

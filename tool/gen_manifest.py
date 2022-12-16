@@ -70,7 +70,7 @@ def wrl9andlater():
         print("Can not found pkgs_dir!")
         sys.exit(1) 
 
-    output_file_nm = "Manifest_WRLinux"+wrl_version+".spdx.json"
+    output_file_nm = "WRLinux"+wrl_version+".spdx.json"
     txt_file = open(os.path.join(os.path.dirname(__file__),output_file_nm), 'w')
     doc.name = DEFAULTTUNE+"-wrs-linux"
     doc.comment = "DISTRO: " + "WRLinux-" + wrl_version + "  ARCH: " + DEFAULTTUNE
@@ -89,8 +89,8 @@ def wrl9andlater():
     
     doc.to_json(txt_file, sort_keys=True)
     txt_file.close()
-    print("Packages info saved to file: " + os.path.join(os.path.dirname(__file__),output_file_nm))
-    print("Please send this file to Wind River.")
+    print("SBOM file is generated as " + os.path.join(os.path.dirname(__file__),output_file_nm))
+    print("Please share the SBOM file with Wind River.")
 
 def wrl345678():
 
@@ -167,7 +167,7 @@ def wrl345678():
 
     if WRL_RCPL_VERSION =="": # no rcpl info exist in config.log and makefile
             WRL_RCPL_VERSION = "0" 
-    output_file_nm = "Manifest_"+DISTRO_NAME+WRL_MAJOR_VERSION+"."+WRL_RCPL_VERSION+".spdx.json"
+    output_file_nm = DISTRO_NAME+WRL_MAJOR_VERSION+"."+WRL_RCPL_VERSION+".spdx.json"
     txt_file = open(os.path.join(os.path.dirname(__file__),output_file_nm), 'w')
     doc.name = DISTRO_NAME
     doc.comment = "DISTRO: " + "WRLinux-" + WRL_MAJOR_VERSION+"."+WRL_RCPL_VERSION + "  ARCH: " + ""
@@ -220,8 +220,8 @@ def wrl345678():
             doc.packages.append(package)
     doc.to_json(txt_file, sort_keys=True)
     txt_file.close()
-    print("Packages info saved to file: " + os.path.join(os.path.dirname(__file__),output_file_nm))
-    print("Please send this file to Wind River.")
+    print("SBOM file is generated as " + os.path.join(os.path.dirname(__file__),output_file_nm))
+    print("Please share the SBOM file with Wind River.")
 
 is_build_dir_exist = False
 is_configlog_exist = False
