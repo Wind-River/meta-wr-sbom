@@ -882,15 +882,17 @@ python image_combine_spdx() {
     doc.creationInfo.creators.append("Organization: WindRiver ()")
     doc.creationInfo.creators.append("Person: N/A ()")
     if 'Yocto' in d.getVar("DISTRO_NAME", True):
-        doc.comment = "DISTRO: " + "Yocto-" + get_yocto_codename(d.getVar("DISTRO_VERSION", True)) + "-" + d.getVar("DISTRO_VERSION", True) + "  ARCH: " + d.getVar("MACHINE_ARCH", True)
+        doc.comment = "DISTRO: " + "Yocto-" + get_yocto_codename(d.getVar("DISTRO_VERSION", True)) + "-" + d.getVar("DISTRO_VERSION", True)
     elif 'Wind River' in d.getVar("DISTRO_NAME", True):
-        doc.comment = "DISTRO: " + "WRLinux-" + d.getVar("DISTRO_VERSION", True) + "  ARCH: " + d.getVar("MACHINE_ARCH", True)
+        doc.comment = "DISTRO: " + "WRLinux-" + d.getVar("DISTRO_VERSION", True)
     else:
         D_name = d.getVar("DISTRO_NAME", True).strip().replace(" ", "_")
         if D_name:
-            doc.comment = "DISTRO: " + D_name + '-' + d.getVar("DISTRO_VERSION", True) + "  ARCH: " + d.getVar("MACHINE_ARCH", True)
+            doc.comment = "DISTRO: " + D_name + '-' + d.getVar("DISTRO_VERSION", True)
         else:
-            doc.comment = "DISTRO: Unknown-" + d.getVar("DISTRO_VERSION", True) + "  ARCH: " + d.getVar("MACHINE_ARCH", True)
+            doc.comment = "DISTRO: Unknown-" + d.getVar("DISTRO_VERSION", True)
+    doc.comment += "  ARCH: " + d.getVar("MACHINE_ARCH", True)
+    doc.comment += "  PROJECT_RELEASETIME: " + str(d.getVar("PROJECT_RELEASETIME", True))
     doc.documentDescribes.append("SPDXRef-Image-" + d.getVar("IMAGE_NAME", True))
 
     image = oe_sbom.spdx.SPDXPackage()
