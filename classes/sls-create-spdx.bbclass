@@ -892,6 +892,7 @@ python image_combine_spdx() {
         else:
             doc.comment = "DISTRO: Unknown-" + d.getVar("DISTRO_VERSION", True)
     doc.comment += "  ARCH: " + d.getVar("MACHINE_ARCH", True)
+    doc.comment += "  PROJECT_LABELS: " + str(d.getVar("PROJECT_LABELS", True))
     doc.comment += "  PROJECT_RELEASETIME: " + str(d.getVar("PROJECT_RELEASETIME", True))
     doc.documentDescribes.append("SPDXRef-Image-" + d.getVar("IMAGE_NAME", True))
 
