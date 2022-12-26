@@ -5,6 +5,18 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
+if [ -e Makefile ]
+then
+    p_version=`sed -n 's/^PACKAGE_VERSION\s*=\s*\(.*\)/\1/p' Makefile`
+    if [ $p_version -eq "8.0" ]
+    then
+        make bbs
+    else
+        echo "Not support this Wind River version."
+        exit 1
+    fi
+fi
+
 layer_path=$(dirname $(realpath $BASH_SOURCE))
 
 grep -q ${layer_path} conf/bblayers.conf
