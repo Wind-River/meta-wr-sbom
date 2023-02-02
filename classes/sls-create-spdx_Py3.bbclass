@@ -433,8 +433,11 @@ python do_create_spdx() {
 
     def get_packagegroup():
         package_bb = d.getVar("FILE", True)
-        packagegroup = package_bb.split('recipes-')[1].split('/')[0]
-        return packagegroup
+        if 'recipes-' in package_bb:
+            packagegroup = package_bb.split('recipes-')[1].split('/')[0]
+            return packagegroup
+        else:
+            return 'None'
 
     deploy_dir_spdx = Path(d.getVar("DEPLOY_DIR_SPDX", True))
     top_dir = Path(d.getVar("TOPDIR", True))
