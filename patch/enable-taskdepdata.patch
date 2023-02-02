@@ -1,0 +1,97 @@
+diff --git a/bin/bitbake-worker b/bin/bitbake-worker
+index 66b6aabf..c7e24328 100755
+--- a/bin/bitbake-worker
++++ b/bin/bitbake-worker
+@@ -81,7 +81,7 @@ def workerlog_write(msg):
+         lf.write(msg)
+         lf.flush()
+ 
+-def fork_off_task(cfg, data, workerdata, fn, task, taskname, appends, quieterrors=False):
++def fork_off_task(cfg, data, workerdata, fn, task, taskname, appends, taskdepdata, quieterrors=False):
+     # We need to setup the environment BEFORE the fork, since
+     # a fork() or exec*() activates PSEUDO...
+ 
+@@ -147,6 +147,7 @@ def fork_off_task(cfg, data, workerdata, fn, task, taskname, appends, quieterror
+                 os.umask(umask)
+ 
+             data.setVar("BB_WORKERCONTEXT", "1")
++            data.setVar("BB_TASKDEPDATA", taskdepdata)
+             data.setVar("BUILDNAME", workerdata["buildname"])
+             data.setVar("DATE", workerdata["date"])
+             data.setVar("TIME", workerdata["time"])
+@@ -299,10 +300,10 @@ class BitbakeWorker(object):
+         sys.exit(0)
+ 
+     def handle_runtask(self, data):
+-        fn, task, taskname, quieterrors, appends = pickle.loads(data)
++        fn, task, taskname, quieterrors, appends, taskdepdata = pickle.loads(data)
+         workerlog_write("Handling runtask %s %s %s\n" % (task, fn, taskname))
+ 
+-        pid, pipein, pipeout = fork_off_task(self.cookercfg, self.data, self.workerdata, fn, task, taskname, appends, quieterrors)
++        pid, pipein, pipeout = fork_off_task(self.cookercfg, self.data, self.workerdata, fn, task, taskname, appends, taskdepdata, quieterrors)
+ 
+         self.build_pids[pid] = task
+         self.build_pipes[pid] = runQueueWorkerPipe(pipein, pipeout)
+diff --git a/lib/bb/runqueue.py b/lib/bb/runqueue.py
+index 2b897a09..1d892e2a 100644
+--- a/lib/bb/runqueue.py
++++ b/lib/bb/runqueue.py
+@@ -1390,14 +1390,16 @@ class RunQueueExecuteTasks(RunQueueExecute):
+                 startevent = runQueueTaskStarted(task, self.stats, self.rq)
+                 bb.event.fire(startevent, self.cfgData)
+ 
++            taskdepdata = self.build_taskdepdata(task)
++
+             taskdep = self.rqdata.dataCache.task_deps[fn]
+             if 'fakeroot' in taskdep and taskname in taskdep['fakeroot']:
+                 if not self.rq.fakeworker:
+                     self.rq.start_fakeworker(self)
+-                self.rq.fakeworker.stdin.write("<runtask>" + pickle.dumps((fn, task, taskname, False, self.cooker.collection.get_file_appends(fn))) + "</runtask>")
++                self.rq.fakeworker.stdin.write("<runtask>" + pickle.dumps((fn, task, taskname, False, self.cooker.collection.get_file_appends(fn), taskdepdata)) + "</runtask>")
+                 self.rq.fakeworker.stdin.flush()
+             else:
+-                self.rq.worker.stdin.write("<runtask>" + pickle.dumps((fn, task, taskname, False, self.cooker.collection.get_file_appends(fn))) + "</runtask>")
++                self.rq.worker.stdin.write("<runtask>" + pickle.dumps((fn, task, taskname, False, self.cooker.collection.get_file_appends(fn), taskdepdata)) + "</runtask>")
+                 self.rq.worker.stdin.flush()
+ 
+             self.build_stamps[task] = bb.build.stampfile(taskname, self.rqdata.dataCache, fn)
+@@ -1426,6 +1428,26 @@ class RunQueueExecuteTasks(RunQueueExecute):
+ 
+         return True
+ 
++    def build_taskdepdata(self, task):
++        taskdepdata = {}
++        next = self.rqdata.runq_depends[task]
++        next.add(task)
++        while next:
++            additional = []
++            for revdep in next:
++                fn = self.rqdata.taskData.fn_index[self.rqdata.runq_fnid[revdep]]
++                pn = self.rqdata.dataCache.pkg_fn[fn]
++                taskname = self.rqdata.runq_task[revdep]
++                deps = self.rqdata.runq_depends[revdep]
++                taskdepdata[revdep] = [pn, taskname, fn, deps]
++                for revdep2 in deps:
++                    if revdep2 not in taskdepdata:
++                        additional.append(revdep2)
++            next = additional
++
++        #bb.note("Task %s: " % task + str(taskdepdata).replace("], ", "],\n"))
++        return taskdepdata
++
+ class RunQueueExecuteScenequeue(RunQueueExecute):
+     def __init__(self, rq):
+         RunQueueExecute.__init__(self, rq)
+@@ -1747,10 +1769,10 @@ class RunQueueExecuteScenequeue(RunQueueExecute):
+             if 'fakeroot' in taskdep and taskname in taskdep['fakeroot']:
+                 if not self.rq.fakeworker:
+                     self.rq.start_fakeworker(self)
+-                self.rq.fakeworker.stdin.write("<runtask>" + pickle.dumps((fn, realtask, taskname, True, self.cooker.collection.get_file_appends(fn))) + "</runtask>")
++                self.rq.fakeworker.stdin.write("<runtask>" + pickle.dumps((fn, realtask, taskname, True, self.cooker.collection.get_file_appends(fn), None)) + "</runtask>")
+                 self.rq.fakeworker.stdin.flush()
+             else:
+-                self.rq.worker.stdin.write("<runtask>" + pickle.dumps((fn, realtask, taskname, True, self.cooker.collection.get_file_appends(fn))) + "</runtask>")
++                self.rq.worker.stdin.write("<runtask>" + pickle.dumps((fn, realtask, taskname, True, self.cooker.collection.get_file_appends(fn), None)) + "</runtask>")
+                 self.rq.worker.stdin.flush()
+ 
+             self.runq_running[task] = 1
