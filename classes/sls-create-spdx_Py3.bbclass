@@ -867,6 +867,11 @@ python image_combine_spdx() {
             if ver == version[:len(ver)]:
                 return yocto_version_to_codename[ver]
 
+    def get_yocto_version(bitbake_version):
+        bb_version_to_yocto_version = {"2.2": "4.1", "2.0": "4.0", "1.52": "3.4", "1.50": "3.3", "1.48": "3.2", "1.46": "3.1", "1.44": "3.0", "1.42": "2.7", "1.40": "2.6", "1.38": "2.5", "1.36": "2.4", "1.34": "2.3", "1.32": "2.2", "1.30": "2.1", "1.28": "2.0", "1.26": "1.8", "1.24": "1.7", "1.22": "1.6", "1.20": "1.5", "1.18": "1.4", "1.18": "1.4", "1.16": "1.3"}
+        bb_ver = bitbake_version.split('.')
+        return bb_version_to_yocto_version[bb_ver[0]+'.'+bb_ver[1]]
+
     creation_time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     image_name = d.getVar("IMAGE_NAME", True)
     image_link_name = d.getVar("IMAGE_LINK_NAME", True)
@@ -889,11 +894,19 @@ python image_combine_spdx() {
     elif 'Wind River' in d.getVar("DISTRO_NAME", True):
         doc.comment = "DISTRO: " + "WRLinux-" + d.getVar("DISTRO_VERSION", True)
     else:
+        wr_version = d.getVar("WRLINUX_VERSION", True)
+        if wr_version:
+            doc.comment = "DISTRO: " + "WRLinux-" + wr_version
+        else:
+            bb_version = d.getVar("BB_VERSION", True)
+            yocto_version = get_yocto_version(bb_version)
+            doc.comment = "DISTRO: " + "Yocto-" + get_yocto_codename(yocto_version) + "-" + yocto_version
+
         D_name = d.getVar("DISTRO_NAME", True).strip().replace(" ", "_")
         if D_name:
-            doc.comment = "DISTRO: " + D_name + '-' + d.getVar("DISTRO_VERSION", True)
+            doc.comment += "  CUSTOMIZED_DISTRO: " + D_name + '-' + d.getVar("DISTRO_VERSION", True)
         else:
-            doc.comment = "DISTRO: Unknown-" + d.getVar("DISTRO_VERSION", True)
+            doc.comment += "  CUSTOMIZED_DISTRO: Unknown-" + d.getVar("DISTRO_VERSION", True)
     doc.comment += "  ARCH: " + d.getVar("MACHINE_ARCH", True)
     doc.comment += "  PROJECT_LABELS: " + str(d.getVar("PROJECT_LABELS", True))
     doc.comment += "  PROJECT_RELEASETIME: " + str(d.getVar("PROJECT_RELEASETIME", True))
