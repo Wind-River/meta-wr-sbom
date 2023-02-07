@@ -30,6 +30,8 @@ SPDX_NAMESPACE_PREFIX ??= "http://spdx.org/spdxdoc"
 
 SPDX_LICENSES ??= "${WRSBOM_LAYER}/meta/files/spdx-licenses.json"
 
+BB_HASH_IGNORE_MISMATCH = '1'
+
 do_image_complete[depends] = "virtual/kernel:do_create_spdx"
 
 def get_doc_namespace(d, doc):
