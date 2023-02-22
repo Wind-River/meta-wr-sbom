@@ -55,24 +55,33 @@ then
         echo "ERROR: Not support this Wind River version."
     fi
 else
-    #WRLinux9 -- LTS 22
     grep -q ${layer_path} conf/bblayers.conf
     if [ $? -ne 0 ]
     then
-        grep -q "^INHERIT.*sls-create-spdx'" conf/local.conf
-        [ $? -eq 0 ] && sed -i '/^INHERIT.*sls-create-spdx/d' conf/local.conf
-        bitbake-layers add-layer ${layer_path}
+        echo "BBLAYERS += '${layer_path}'" >> conf/bblayers.conf
     else
         echo "${layer_path} had exist in bblayers.conf"
     fi
     
-    echo "INHERIT += 'sls-create-spdx'" >> conf/local.conf
-    
-    [ -e ${layer_path}/classes/sls-create-spdx.bbclass ] && rm ${layer_path}/classes/sls-create-spdx.bbclass
-    ln -s sls-create-spdx_Py3.bbclass ${layer_path}/classes/sls-create-spdx.bbclass
-    [ -e ${layer_path}/lib/oe_sbom ] && rm ${layer_path}/lib/oe_sbom
-    ln -s oe_sbom3 ${layer_path}/lib/oe_sbom
-    
-    export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH
-    export LANG=en_US.UTF-8
+    grep -q "^INHERIT.*sls-create-spdx'" conf/local.conf
+    [ $? -ne 0 ] && echo "INHERIT += 'sls-create-spdx'" >> conf/local.conf
+
+    bb_version=`bitbake --version | awk '{print $NF}'`
+    eval $(echo $bb_version |awk -F\. '{print "m_ver="$1" s_ver="$2}')
+
+    if [ $m_ver -eq 1 ] && [ $s_ver -lt 31 ]		#bitbake 1.30 and lower version(yocto2.1 to 1.5)
+    then
+        [ -e ${layer_path}/classes/sls-create-spdx.bbclass ] && rm ${layer_path}/classes/sls-create-spdx.bbclass
+        ln -s sls-create-spdx_Py2.bbclass ${layer_path}/classes/sls-create-spdx.bbclass
+        [ -e ${layer_path}/lib/oe_sbom ] && rm ${layer_path}/lib/oe_sbom
+        ln -s oe_sbom2 ${layer_path}/lib/oe_sbom
+    else						#bitbake 1.32 and higher version(yocto2.2 to 4.0)
+        [ -e ${layer_path}/classes/sls-create-spdx.bbclass ] && rm ${layer_path}/classes/sls-create-spdx.bbclass
+        ln -s sls-create-spdx_Py3.bbclass ${layer_path}/classes/sls-create-spdx.bbclass
+        [ -e ${layer_path}/lib/oe_sbom ] && rm ${layer_path}/lib/oe_sbom
+        ln -s oe_sbom3 ${layer_path}/lib/oe_sbom
+
+        export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH
+        export LANG=en_US.UTF-8
+    fi
 fi
