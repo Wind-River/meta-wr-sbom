@@ -110,7 +110,7 @@ git clone https://github.com/Wind-River/meta-wr-sbom
 ### Generating SBOM File
 At the top-level directory of your project directory, perform the following command:
 ```bash
-python meta-wr-sbom/tool/gen_manifest.py .
+python meta-wr-sbom/tool/gen_eol_wrl_sbom.py .
 ```
 
 The SBOM file of your project will be generated as  **meta-wr-sbom/tool/${image_name}.spdx.json**.   

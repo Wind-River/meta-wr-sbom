@@ -11,7 +11,7 @@ import datetime
 import json
 
 if len(sys.argv) < 2 or os.path.exists(sys.argv[1]) == False:
-    print("Please specify a project directory to run the gen_manifest script against.")
+    print("Please specify a project directory to run the gen_eol_wrl_sbom script against.")
     #print("Project directory means the folder where [config.log] and [Makefile] file located.")
     sys.exit(1)
 
@@ -20,7 +20,7 @@ project_dir = sys.argv[1]
 def gen_SPDXPattern():
     doc = spdx.SPDXDocument()
     doc.creationInfo.created = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-    doc.creationInfo.creators.append("Tool: meta-wr-sbom gen_manifest.py")
+    doc.creationInfo.creators.append("Tool: meta-wr-sbom gen_eol_wrl_sbom.py")
     doc.creationInfo.creators.append("Organization: WindRiver")
     doc.creationInfo.creators.append("Person: N/A")
     return doc
