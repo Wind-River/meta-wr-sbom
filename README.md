@@ -114,6 +114,43 @@ python meta-wr-sbom/tool/gen_eol_wrl_sbom.py .
 ```
 
 The SBOM file of your project will be generated as  **meta-wr-sbom/tool/${image_name}.spdx.json**.   
+***************************************************************************************
+
+# Supported Binary-based Linux Distribution Versions
+- Debian
+- Ubuntu
+- Fedora
+- CentOS
+- Red Hat
+- openSUSE
+- SUSE
+- Alpine
+
+## Requirements
+Bash shell in Linux.
+
+## Quick Start
+Download the shell script to the target Linux host and run the script in the host.
+
+### Getting shell script
+Download the shell script to the home directory of current user on target Linux host
+```bash
+cd ~
+wget https://raw.githubusercontent.com/Wind-River/meta-wr-sbom/main/tool/gen_os_pkgs_manifest.sh
+```
+
+### Generating manifest file
+At the home directory, perform the following commands:
+```bash
+chmod u+rx gen_os_pkgs_manifest.sh
+./gen_os_pkgs_manifest.sh
+```
+Or specify a root filesystem path:
+```bash
+./gen_os_pkgs_manifest.sh -r /path/to/rootfs
+```
+The manifest file will be generated as  **os_packages.manifest.txt** in the current directory.
+If the file is already present, the generated filename will be changed to **os_packages.manifest.txt.xxxxxxxxxx.txt**
 
 # Legal Notices
 
