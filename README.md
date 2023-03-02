@@ -127,6 +127,10 @@ The SBOM file of your project will be generated as  **meta-wr-sbom/tool/${image_
 - [Red Hat Enterprise Linux 6 (Santiago)](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6)  
 - [Red Hat Enterprise Linux 7 (Maipo)](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7)  
 - [Red Hat Enterprise Linux 8 (Ootpa)](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8)  
+- [CentOS 5](https://wiki.centos.org/Manuals/ReleaseNotes/CentOS5.11)  
+- [CentOS 6](https://wiki.centos.org/Manuals/ReleaseNotes/CentOS6.10)  
+- [CentOS 7](https://wiki.centos.org/Manuals/ReleaseNotes/CentOS7.2003)  
+- [CentOS 8](https://wiki.centos.org/Manuals/ReleaseNotes/CentOSLinux8)  
 
 ## Requirements
 Bash shell in Linux.
