@@ -117,14 +117,16 @@ The SBOM file of your project will be generated as  **meta-wr-sbom/tool/${image_
 ***************************************************************************************
 
 # Supported Binary-based Linux Distribution Versions
-- Debian
-- Ubuntu
-- Fedora
-- CentOS
-- Red Hat
-- openSUSE
-- SUSE
-- Alpine
+- [Debian 7 (Wheezy)](https://www.debian.org/releases/wheezy/)  
+- [Debian 8 (Jessie)](https://www.debian.org/releases/jessie/)  
+- [Debian 9 (Stretch)](https://www.debian.org/releases/stretch/)  
+- [Debian 10 (Buster)](https://www.debian.org/releases/buster/)  
+- [Debian 11 (Bullseye)](https://www.debian.org/releases/bullseye/)  
+- [Debian 12 (Bookworm)](https://www.debian.org/releases/bookworm/)  
+- [Red Hat Enterprise Linux 5 (Tikanga)](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/5)  
+- [Red Hat Enterprise Linux 6 (Santiago)](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6)  
+- [Red Hat Enterprise Linux 7 (Maipo)](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7)  
+- [Red Hat Enterprise Linux 8 (Ootpa)](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8)  
 
 ## Requirements
 Bash shell in Linux.
