@@ -90,7 +90,7 @@ make
 The SBOM file of your project will be generated as  **bitbake_build/tmp/deploy/images/${machine}/${image_name}.spdx.json**.   
 ***************************************************************************************
 
-# Supported EOL Wind River Linux versions
+# Supported EOL Wind River Linux Versions
 - Wind River Linux 3
 - [Wind River Linux 4](https://docs.windriver.com/category/os-wind_river_linux_4)
 - [Wind River Linux 5](https://docs.windriver.com/category/os-wind_river_linux_5)
@@ -110,10 +110,10 @@ git clone https://github.com/Wind-River/meta-wr-sbom
 ### Generating SBOM File
 At the top-level directory of your project directory, perform the following command:
 ```bash
-python meta-wr-sbom/tool/gen_eol_wrl_sbom.py .
+python meta-wr-sbom/tools/gen_eol_wrl_sbom.py .
 ```
 
-The SBOM file of your project will be generated as  **meta-wr-sbom/tool/${image_name}.spdx.json**.   
+The SBOM file of your project will be generated as  **meta-wr-sbom/tools/${image_name}.spdx.json**.   
 ***************************************************************************************
 
 # Supported Binary-based Linux Distribution Versions
@@ -142,7 +142,7 @@ Download the shell script to the target Linux host and run the script in the hos
 Download the shell script to the home directory of current user on target Linux host
 ```bash
 cd ~
-wget https://raw.githubusercontent.com/Wind-River/meta-wr-sbom/main/tool/gen_os_pkgs_manifest.sh
+wget https://raw.githubusercontent.com/Wind-River/meta-wr-sbom/main/tools/gen_os_pkgs_manifest.sh
 ```
 
 ### Generating manifest file
