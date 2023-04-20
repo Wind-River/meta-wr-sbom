@@ -18,10 +18,10 @@ def gen_SPDXPattern():
     doc.creationInfo.creators.append("Person: N/A")
     return doc
 
-    def get_yocto_version(bitbake_version):
-        bb_version_to_yocto_version = {"2.2": "4.1", "2.0": "4.0", "1.52": "3.4", "1.50": "3.3", "1.48": "3.2", "1.46": "3.1", "1.44": "3.0", "1.42": "2.7", "1.40": "2.6", "1.38": "2.5", "1.36": "2.4", "1.34": "2.3", "1.32": "2.2", "1.30": "2.1", "1.28": "2.0", "1.26": "1.8", "1.24": "1.7", "1.22": "1.6", "1.20": "1.5", "1.18": "1.4", "1.18": "1.4", "1.16": "1.3"}
-        bb_ver = bitbake_version.split('.')
-        return bb_version_to_yocto_version[bb_ver[0]+'.'+bb_ver[1]]
+def get_yocto_version(bitbake_version):
+    bb_version_to_yocto_version = {"2.2": "4.1", "2.0": "4.0", "1.52": "3.4", "1.50": "3.3", "1.48": "3.2", "1.46": "3.1", "1.44": "3.0", "1.42": "2.7", "1.40": "2.6", "1.38": "2.5", "1.36": "2.4", "1.34": "2.3", "1.32": "2.2", "1.30": "2.1", "1.28": "2.0", "1.26": "1.8", "1.24": "1.7", "1.22": "1.6", "1.20": "1.5", "1.18": "1.4", "1.18": "1.4", "1.16": "1.3"}
+    bb_ver = bitbake_version.split('.')
+    return bb_version_to_yocto_version[bb_ver[0]+'.'+bb_ver[1]]
 
 doc = gen_SPDXPattern()    
 f_manifest = open("manifest.lst")
