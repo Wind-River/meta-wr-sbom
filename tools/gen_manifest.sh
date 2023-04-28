@@ -64,14 +64,14 @@ do
 
         if [ -e ${ROOTFS_DIR}/${pkg_file} ]
         then
-		recipeinfo=`find tmp*/deploy/licenses/${cur_package} -name recipeinfo`
-		if [ -n "${recipeinfo}" ]
-		then
-			lic=`grep '^LICENSE' $recipeinfo | sed 's/: /=/'`
-		else
-			#lic=`bitbake ${cur_package} -e | grep '^LICENSE='`
+#		recipeinfo=`find tmp*/deploy/licenses/${cur_package} -name recipeinfo`
+#		if [ -n "${recipeinfo}" ]
+#		then
+#			lic=`grep '^LICENSE' $recipeinfo | sed 's/: /=/'`
+#		else
+#			#lic=`bitbake ${cur_package} -e | grep '^LICENSE='`
 			lic="LICENSE=NOASSERTION"
-		fi
+#		fi
 
 		PV=${vertmp%-*}
 		echo ${cur_package} ${PV%+git*} >> ${f_output}
