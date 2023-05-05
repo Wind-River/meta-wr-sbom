@@ -42,6 +42,18 @@ do
 	unset cur_package vertmp
 	echo $d | awk -F/ '{print "cur_package="$(NF-3) " vertmp="$(NF-2) " : " $NF}' >> ${f_log}
 	eval $(echo $d | awk -F/ '{print "cur_package="$(NF-3) " vertmp="$(NF-2)}')
+
+	case ${cur_package} in
+	"packagegroup-"* )
+		echo "skip packagegroup" >> ${f_log}
+		continue
+		;;
+	"base-passwd" )
+		echo "skip base-passwd package" >> ${f_log}
+		continue
+		;;
+	esac
+
 	grep -q "^${cur_package}" ${f_output}
 	if [ $? -eq 0 ]
 	then
