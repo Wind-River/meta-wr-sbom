@@ -874,6 +874,52 @@ python image_combine_spdx() {
         bb_ver = bitbake_version.split('.')
         return bb_version_to_yocto_version[bb_ver[0]+'.'+bb_ver[1]]
 
+
+    def getInstalledPkgs(license_manifest):
+        recipeDict = {}
+    
+        f_license_manifest = open(license_manifest)
+        for line in f_license_manifest:
+            line_data = line.strip().split(":")
+            if line_data[0] == "PACKAGE NAME":
+                package_name = line_data[1].strip()
+            if line_data[0] == "PACKAGE VERSION":
+                package_version = line_data[1].strip()
+            if line_data[0] == "RECIPE NAME":
+                recipe_name = line_data[1].strip()
+            if line_data[0] == "LICENSE":
+                declared_license = line_data[1].strip()
+            if line.strip() == '' and package_name:
+                pkgInfo = dict()
+                if recipe_name not in recipeDict.keys():
+                    recipeDict[recipe_name] = {}
+                if package_version not in recipeDict[recipe_name].keys():
+                    recipeDict[recipe_name][package_version] = []
+    
+                pkgInfo["name"] = package_name
+                pkgInfo["versionInfo"] = package_version
+                pkgInfo["recipe"] = recipe_name
+                pkgInfo["licenseDeclared"] = declared_license
+                package_name = ''
+                recipeDict[recipe_name][package_version].append(pkgInfo)
+        if package_name:            #if the last line is not empty
+            pkgInfo = dict()
+            if recipe_name not in recipeDict.keys():
+                recipeDict[recipe_name] = {}
+            if package_version not in recipeDict[recipe_name].keys():
+                recipeDict[recipe_name][package_version] = []
+    
+            pkgInfo["name"] = package_name
+            pkgInfo["versionInfo"] = package_version
+            pkgInfo["recipe"] = recipe_name
+            pkgInfo["licenseDeclared"] = declared_license
+            package_name = ''
+            recipeDict[recipe_name][package_version].append(pkgInfo)
+    
+        f_license_manifest.close()
+        return recipeDict
+
+
     creation_time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     image_name = d.getVar("IMAGE_NAME", True)
     image_link_name = d.getVar("IMAGE_LINK_NAME", True)
@@ -971,9 +1017,18 @@ python image_combine_spdx() {
         )
 
     recipe_spdx_path = os.path.join(deploy_dir_spdx, "recipes")
-    for filename in os.listdir(recipe_spdx_path):
-        if filename.endswith("spdx.json") and "-native" not in filename:
-            with open(os.path.join(recipe_spdx_path, filename)) as f:
+
+    license_manifest_file = os.path.join(d.getVar("LICENSE_DIRECTORY", True), d.getVar("IMAGE_NAME", True), "license.manifest")
+    pkgsInfo = getInstalledPkgs(license_manifest_file)
+
+    for name in pkgsInfo.keys():
+        if name.startswith("packagegroup-") or \
+             name == "base-passwd":
+            continue
+
+        filename = os.path.join(recipe_spdx_path, "recipe-%s.spdx.json" % name)
+        if os.path.exists(filename):
+            with open(filename) as f:
                 recipe_spdx = json.load(f)
                 if 'packages' in recipe_spdx.keys():
                     doc.packages.extend(recipe_spdx["packages"])
@@ -981,6 +1036,8 @@ python image_combine_spdx() {
                 #    doc.files.extend(recipe_spdx["files"])
                 #if 'relationships' in recipe_spdx.keys():
                 #    doc.relationships.extend(recipe_spdx["relationships"])
+        else:
+            bb.warn("Found no recipe spdx file: %s" % filename)
     image_spdx_path = imgdeploydir / (image_name + ".spdx.json")
 
     with image_spdx_path.open("wb") as f:
