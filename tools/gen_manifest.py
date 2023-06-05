@@ -491,6 +491,7 @@ def compareInstalledPkgs():
                     pkgInfo["recipe"] = recipe_name
                     pkgInfo["licenseDeclared"] = declared_license
                     recipeDict[recipe_name][package_version].append(pkgInfo)
+                break
 
     return recipeDict
 
@@ -508,18 +509,20 @@ def main():
         line.startswith("INHERIT=") or \
         line.startswith("LICENSE_DIRECTORY=") or \
         line.startswith("TMPDIR=") or \
-        line.startswith("IMAGE_ROOTFS="):
+        line.startswith("IMAGE_ROOTFS=") or \
+        line.startswith("IMAGE_NAME="):
             line_data = line.split("=")
             env_data[line_data[0]] = line_data[1].strip().strip('"')
     
     env_metadata.close()
     del env_metadata
+    image_name_arch = env_data["IMAGE_NAME"][0:env_data["IMAGE_NAME"].rfind('-')]
     
     license_manifest_dir = ''
     license_deploy_tree = os.walk(env_data["LICENSE_DIRECTORY"])
     for root, dirs, files in license_deploy_tree:
         for dirname in dirs:
-            if dirname.startswith(target_image):
+            if dirname.startswith(image_name_arch):
                 if os.path.exists(os.path.join(root, dirname, "license.manifest")):
                     if dirname > license_manifest_dir:
                         license_manifest_dir = dirname
