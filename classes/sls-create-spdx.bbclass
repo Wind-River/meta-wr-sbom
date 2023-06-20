@@ -112,7 +112,7 @@ def convert_license_to_spdx(lic, document, d, existing={}):
             if extracted_info.extractedText is None:
                 # Error out, as the license was in available_licenses so should
                 # be on disk somewhere.
-                bb.error("Cannot find text for license %s" % name)
+                bb.warn("Cannot find text for license %s" % name)
         else:
             # If it's not SPDX, or PD, or in available licenses, then NO_GENERIC_LICENSE must be set
             filename = d.getVarFlag('NO_GENERIC_LICENSE', name)
@@ -121,7 +121,7 @@ def convert_license_to_spdx(lic, document, d, existing={}):
                 with open(filename, errors="replace") as f:
                     extracted_info.extractedText = f.read()
             else:
-                bb.error("Cannot find any text for license %s" % name)
+                bb.warn("Cannot find any text for license %s" % name)
 
         extracted[name] = extracted_info
         document.hasExtractedLicensingInfos.append(extracted_info)
@@ -298,7 +298,7 @@ def add_package_sources_from_debug(d, package_doc, spdx_package, package, packag
             if file_path.lstrip("/") == pkg_file.fileName.lstrip("/"):
                 break
         else:
-            bb.fatal("No package file found for %s" % str(file_path))
+            bb.warn("No package file found for %s" % str(file_path))
             continue
 
         for debugsrc in file_data["debugsrc"]:
@@ -700,7 +700,9 @@ python do_create_runtime_spdx() {
                     spdx_package = p
                     break
             else:
-                bb.fatal("Package '%s' not found in %s" % (pkg_name, pkg_spdx_path))
+                bb.warn("Package '%s' not found in %s" % (pkg_name, pkg_spdx_path))
+                spdx_package = oe_sbom.spdx.SPDXPackage()
+                spdx_package.SPDXID = ' '
 
             runtime_doc = oe_sbom.spdx.SPDXDocument()
             runtime_doc.name = "runtime-" + pkg_name
@@ -758,7 +760,9 @@ python do_create_runtime_spdx() {
                             dep_spdx_package = pkg
                             break
                     else:
-                        bb.fatal("Package '%s' not found in %s" % (dep_pkg, dep_path))
+                        bb.warn("Package '%s' not found in %s" % (dep_pkg, dep_path))
+                        dep_spdx_package = oe_sbom.spdx.SPDXPackage()
+                        dep_spdx_package.SPDXID = ' '
 
                     dep_package_ref = oe_sbom.spdx.SPDXExternalDocumentRef()
                     dep_package_ref.externalDocumentId = "DocumentRef-runtime-dependency-" + spdx_dep_doc.name
@@ -989,14 +993,14 @@ python image_combine_spdx() {
                 doc.add_relationship(image, "CONTAINS", "%s:%s" % (pkg_ref.externalDocumentId, p.SPDXID))
                 break
         else:
-            bb.fatal("Unable to find package with name '%s' in SPDX file %s" % (name, pkg_spdx_path))
+            bb.warn("Unable to find package with name '%s' in SPDX file %s" % (name, pkg_spdx_path))
 
         for r in pkg_doc.relationships:
             if r.relationshipType == "GENERATED_FROM":
                  doc.relationships.append(r)
                  break
         else:
-             bb.fatal("Unable to find GENERATED_FROM relationship in SPDX file %s" %  pkg_spdx_path)
+             bb.warn("Unable to find GENERATED_FROM relationship in SPDX file %s" %  pkg_spdx_path)
 
         runtime_spdx_path = deploy_dir_spdx / "runtime" / ("runtime-" + name + ".spdx.json")
         runtime_doc, runtime_doc_sha1 = oe_sbom.sbom.read_doc(runtime_spdx_path)
