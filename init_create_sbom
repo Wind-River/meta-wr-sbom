@@ -7,81 +7,16 @@
 
 layer_path=$(dirname $(realpath $BASH_SOURCE))
 
-# WRLinux5 -- WRLinux8
-if [ -e Makefile ]
+grep -q ${layer_path} conf/bblayers.conf
+if [ $? -ne 0 ]
 then
-    p_version=`sed -n 's/^PACKAGE_VERSION\s*=\s*\(.*\)/\1/p' Makefile`
-
-    if [ ${p_version:-" "} == "8.0" ] || [ ${p_version:-" "} == "7.0" ] || [ ${p_version:-" "} == "6.0" ]
-    then
-        case $p_version in
-        "6.0")
-            #patch bitbake
-            pushd ./bitbake > /dev/null
-            if [ ! -e bin/bitbake-worker.wrl6lock ]
-            then
-                echo 'Backup bin/bitbake-worker to bin/bitbake-worker.wrl6lock'
-                cp bin/bitbake-worker bin/bitbake-worker.wrl6lock
-                echo 'Backup lib/bb/runqueue.py to lib/bb/runqueue.py.wrl6lock'
-                cp lib/bb/runqueue.py lib/bb/runqueue.py.wrl6lock
-                patch -p1 -i ${layer_path}/patch/enable-taskdepdata.patch
-            else
-                echo "bitbake has patched as enable taskdepdata"
-            fi
-            popd > /dev/null
-            ;;
-        "7.0")
-            ;;
-        "8.0")
-            ;;
-        esac
-
-        grep -q ${layer_path} bitbake_build/conf/bblayers.conf
-        if [ $? -ne 0 ]
-        then
-            echo "BBLAYERS += '${layer_path}'" >> bitbake_build/conf/bblayers.conf
-        else
-            echo "${layer_path} had exist in bblayers.conf"
-        fi
-        
-        grep -q "^INHERIT.*sls-create-spdx'" bitbake_build/conf/local.conf
-        [ $? -ne 0 ] && echo "INHERIT += 'sls-create-spdx'" >> bitbake_build/conf/local.conf
-
-        [ -e ${layer_path}/classes/sls-create-spdx.bbclass ] && rm ${layer_path}/classes/sls-create-spdx.bbclass
-        ln -s sls-create-spdx_Py2.bbclass ${layer_path}/classes/sls-create-spdx.bbclass
-        [ -e ${layer_path}/lib/oe_sbom ] && rm ${layer_path}/lib/oe_sbom
-        ln -s oe_sbom2 ${layer_path}/lib/oe_sbom
-    else
-        echo "ERROR: Not support this Wind River version."
-    fi
+    echo "BBLAYERS += '${layer_path}'" >> conf/bblayers.conf
 else
-    grep -q ${layer_path} conf/bblayers.conf
-    if [ $? -ne 0 ]
-    then
-        echo "BBLAYERS += '${layer_path}'" >> conf/bblayers.conf
-    else
-        echo "${layer_path} had exist in bblayers.conf"
-    fi
-    
-    grep -q "^INHERIT.*sls-create-spdx'" conf/local.conf
-    [ $? -ne 0 ] && echo "INHERIT += 'sls-create-spdx'" >> conf/local.conf
-
-    bb_version=`bitbake --version | awk '{print $NF}'`
-    eval $(echo $bb_version |awk -F\. '{print "m_ver="$1" s_ver="$2}')
-
-    if [ $m_ver -eq 1 ] && [ $s_ver -lt 31 ]		#bitbake 1.30 and lower version(yocto2.1 to 1.5)
-    then
-        [ -e ${layer_path}/classes/sls-create-spdx.bbclass ] && rm ${layer_path}/classes/sls-create-spdx.bbclass
-        ln -s sls-create-spdx_Py2.bbclass ${layer_path}/classes/sls-create-spdx.bbclass
-        [ -e ${layer_path}/lib/oe_sbom ] && rm ${layer_path}/lib/oe_sbom
-        ln -s oe_sbom2 ${layer_path}/lib/oe_sbom
-    else						#bitbake 1.32 and higher version(yocto2.2 to 4.0)
-        [ -e ${layer_path}/classes/sls-create-spdx.bbclass ] && rm ${layer_path}/classes/sls-create-spdx.bbclass
-        ln -s sls-create-spdx_Py3.bbclass ${layer_path}/classes/sls-create-spdx.bbclass
-        [ -e ${layer_path}/lib/oe_sbom ] && rm ${layer_path}/lib/oe_sbom
-        ln -s oe_sbom3 ${layer_path}/lib/oe_sbom
-
-        export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH
-        export LANG=en_US.UTF-8
-    fi
+    echo "${layer_path} had exist in bblayers.conf"
 fi
+
+grep -q "^INHERIT.*sls-create-spdx'" conf/local.conf
+[ $? -ne 0 ] && echo "INHERIT += 'sls-create-spdx'" >> conf/local.conf
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH
+export LANG=en_US.UTF-8

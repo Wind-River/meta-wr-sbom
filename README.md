@@ -3,11 +3,6 @@ The meta-wr-sbom OpenEmbedded/Yocto layer is used to generate Software Bill of M
 
 ----------------------------------------------------------------------------------------
 # Supported Yocto Project Versions
-- [Yocto Project 1.6 (Daisy)](https://lists.yoctoproject.org/pipermail/yocto-announce/2014-April/000045.html)  
-- [Yocto Project 1.7 (Dizzy)](https://lists.yoctoproject.org/pipermail/yocto-announce/2014-October/000053.html)  
-- [Yocto Project 1.8 (Fido)](https://lists.yoctoproject.org/pipermail/yocto-announce/2015-April/000062.html)  
-- [Yocto Project 2.0 (Jethro)](https://lists.yoctoproject.org/pipermail/yocto-announce/2015-November/000076.html)  
-- [Yocto Project 2.1 (Krogoth)](https://lists.yoctoproject.org/pipermail/yocto-announce/2016-May/000089.html)  
 - [Yocto Project 2.2 (Morty)](https://www.yoctoproject.org/pipermail/yocto-announce/2016-November/000101.html)  
 - [Yocto Project 2.3 (Pyro)](https://lists.yoctoproject.org/pipermail/yocto-announce/2017-May/000112.html)  
 - [Yocto Project 2.4 (Rocko)](https://lists.yoctoproject.org/pipermail/yocto-announce/2017-October/000125.html)   
@@ -30,11 +25,6 @@ The meta-wr-sbom OpenEmbedded/Yocto layer is used to generate Software Bill of M
 
 ----------------------------------------------------------------------------------------
 ## Requirements
-***Yocto Version >=1.6 & <=2.1:***   
-Python 2 version >= 2.7 must be installed on build host machine.  
-  
-***Yocto Version >= 2.2:***  
-***Wind River Linux Version >= WRL9:***  
 Python 3 version >= 3.7 must be installed on build host machine.  
 
 
@@ -60,60 +50,6 @@ bitbake ${image_name}
 The SBOM file of your yocto project will be generated as  **tmp/deploy/images/${machine}/${image_name}.spdx.json**.   
 ***************************************************************************************
 
-# Supported Legacy Wind River Linux Versions
-- [Wind River Linux 6](https://docs.windriver.com/category/os-wind_river_linux_6)
-- [Wind River Linux 7](https://docs.windriver.com/category/os-wind_river_linux_7)
-- [Wind River Linux 8](https://docs.windriver.com/category/os-wind_river_linux_8)
-
-----------------------------------------------------------------------------------------
-## Requirements
-Python 2.7 or later version is required to be installed on build host.
-
-## Quick Start
-### Getting meta-wr-sbom
-Clone the meta-wr-sbom repository (or unpack an archive of it) into the top-level directory of your project:
-```bash
-git clone https://github.com/Wind-River/meta-wr-sbom
-```
-
-### Adding the meta-wr-sbom layer to Your Build
-At the top-level directory of your Wind River project, you can add the meta-wr-sbom layer to the build system by performing the following command:
-```bash
-source ../meta-wr-sbom/init_create_sbom
-```
-
-### Generating SBOM File
-```bash
-make
-```
-
-The SBOM file of your project will be generated as  **bitbake_build/tmp/deploy/images/${machine}/${image_name}.spdx.json**.   
-***************************************************************************************
-
-# Supported EOL Wind River Linux Versions
-- Wind River Linux 3
-- [Wind River Linux 4](https://docs.windriver.com/category/os-wind_river_linux_4)
-- [Wind River Linux 5](https://docs.windriver.com/category/os-wind_river_linux_5)
-
-## Requirements
-Python 2.7 or later version is required to be installed on build host.
-
-## Quick Start
-Fully build your project.
-
-### Getting meta-wr-sbom
-Clone the meta-wr-sbom repository (or unpack an archive of it) into the top-level directory of your project:
-```bash
-git clone https://github.com/Wind-River/meta-wr-sbom
-```
-
-### Generating SBOM File
-At the top-level directory of your project directory, perform the following command:
-```bash
-python meta-wr-sbom/tools/gen_eol_wrl_sbom.py .
-```
-
-The SBOM file of your project will be generated as  **meta-wr-sbom/tools/${image_name}.spdx.json**.   
 ***************************************************************************************
 
 # Supported Binary-based Linux Distribution Versions
