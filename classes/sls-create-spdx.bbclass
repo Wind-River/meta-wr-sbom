@@ -78,6 +78,9 @@ python() {
         d.setVar("SPDX_LICENSE_DATA", data)
 }
 
+# json.load() may not load ${SPDX_LICENSES} *deterministically*, so ignoring its value when calculating signature for SPDX_LICENSE_DATA.
+SPDX_LICENSE_DATA[vardepvalue] = ""
+
 def convert_license_to_spdx(lic, document, d, existing={}):
     from pathlib import Path
     import oe_sbom.spdx
