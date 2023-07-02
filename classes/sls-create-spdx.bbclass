@@ -212,7 +212,7 @@ def add_package_files(d, doc, spdx_pkg, topdir, get_spdxid, get_types, *, archiv
     spdx_files = []
 
     file_counter = 1
-    for subdir, dirs, files in os.walk(topdir):
+    for subdir, dirs, files in os.walk(str(topdir)):
         dirs[:] = [d for d in dirs if d not in ignore_dirs]
         if subdir == str(topdir):
             dirs[:] = [d for d in dirs if d not in ignore_top_level_dirs]
