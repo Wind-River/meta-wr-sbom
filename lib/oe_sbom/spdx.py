@@ -304,7 +304,7 @@ class SPDXDocument(SPDXObject):
 
     @classmethod
     def from_json(cls, f):
-        return cls(**json.load(f))
+        return cls(**json.loads(f.read().decode('utf-8', 'replace')))
 
     def add_relationship(self, _from, relationship, _to, *, comment=None, annotation=None):
         if isinstance(_from, SPDXObject):
