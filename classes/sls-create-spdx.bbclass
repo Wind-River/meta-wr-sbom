@@ -242,7 +242,7 @@ def add_package_files(d, doc, spdx_pkg, topdir, get_spdxid, get_types, *, archiv
 
                         archive.addfile(info, f)
 
-                sha1 = bb.utils.sha1_file(filepath)
+                sha1 = bb.utils.sha1_file(str(filepath))
                 sha1s.append(sha1)
                 spdx_file.checksums.append(oe_sbom.spdx.SPDXChecksum(
                         algorithm="SHA1",
@@ -250,7 +250,7 @@ def add_package_files(d, doc, spdx_pkg, topdir, get_spdxid, get_types, *, archiv
                     ))
                 spdx_file.checksums.append(oe_sbom.spdx.SPDXChecksum(
                         algorithm="SHA256",
-                        checksumValue=bb.utils.sha256_file(filepath),
+                        checksumValue=bb.utils.sha256_file(str(filepath)),
                     ))
 
                 doc.files.append(spdx_file)
@@ -597,7 +597,7 @@ python do_create_spdx() {
                     d,
                     package_doc,
                     spdx_package,
-                    pkgdest / package,
+                    str(pkgdest / package),
                     lambda file_counter: oe_sbom.sbom.get_packaged_file_spdxid(pkg_name, file_counter),
                     lambda filepath: ["BINARY"],
                     archive=archive,
@@ -750,7 +750,7 @@ python do_create_runtime_spdx() {
                 else:
                     dep_path = deploy_dir_spdx / "packages" / ("%s.spdx.json" % dep_pkg)
 
-                    if not os.path.exists(dep_path):
+                    if not os.path.exists(str(dep_path)):
                         continue
 
                     spdx_dep_doc, spdx_dep_sha1 = oe_sbom.sbom.read_doc(dep_path)
@@ -977,7 +977,7 @@ python image_combine_spdx() {
 
     for name in sorted(packages.keys()):
         pkg_spdx_path = deploy_dir_spdx / "packages" / (name + ".spdx.json")
-        if not os.path.exists(pkg_spdx_path):
+        if not os.path.exists(str(pkg_spdx_path)):
             continue
         pkg_doc, pkg_doc_sha1 = oe_sbom.sbom.read_doc(pkg_spdx_path)
 
@@ -1020,7 +1020,7 @@ python image_combine_spdx() {
             comment="Runtime dependencies for %s" % name
         )
 
-    recipe_spdx_path = os.path.join(deploy_dir_spdx, "recipes")
+    recipe_spdx_path = os.path.join(str(deploy_dir_spdx), "recipes")
 
     license_manifest_file = os.path.join(d.getVar("LICENSE_DIRECTORY", True), d.getVar("IMAGE_NAME", True), "license.manifest")
     pkgsInfo = getInstalledPkgs(license_manifest_file)
@@ -1048,7 +1048,7 @@ python image_combine_spdx() {
         doc.to_json(f, sort_keys=True)
 
     image_spdx_link = imgdeploydir / (image_link_name + ".spdx.json")
-    image_spdx_link.symlink_to(os.path.relpath(image_spdx_path, image_spdx_link.parent))
+    image_spdx_link.symlink_to(os.path.relpath(str(image_spdx_path), str(image_spdx_link.parent)))
 
     num_threads = int(d.getVar("BB_NUMBER_THREADS", True))
 
@@ -1057,7 +1057,7 @@ python image_combine_spdx() {
     index = {"documents": []}
 
     spdx_tar_path = imgdeploydir / (image_name + ".spdx.tar.xz")
-    with tarfile.open(name=spdx_tar_path, mode="w:xz") as tar:
+    with tarfile.open(name=str(spdx_tar_path), mode="w:xz") as tar:
         def collect_spdx_document(path):
             nonlocal tar
             nonlocal deploy_dir_spdx
@@ -1119,7 +1119,7 @@ python image_combine_spdx() {
 
     def make_image_link(target_path, suffix):
         link = imgdeploydir / (image_link_name + suffix)
-        link.symlink_to(os.path.relpath(target_path, link.parent))
+        link.symlink_to(os.path.relpath(str(target_path), str(link.parent)))
 
     make_image_link(spdx_tar_path, ".spdx.tar.xz")
 

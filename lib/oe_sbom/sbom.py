@@ -43,7 +43,7 @@ def write_doc(d, spdx_doc, subdir, spdx_deploy=None):
 
     l = spdx_deploy / "by-namespace" / spdx_doc.documentNamespace.replace("/", "_")
     l.parent.mkdir(exist_ok=True, parents=True)
-    l.symlink_to(os.path.relpath(dest, l.parent))
+    l.symlink_to(os.path.relpath(str(dest), str(l.parent)))
 
     return doc_sha1
 
