@@ -15,6 +15,7 @@ The meta-wr-sbom OpenEmbedded/Yocto layer is used to generate Software Bill of M
 - [Yocto Project 3.3 (Hardknott)](https://lists.yoctoproject.org/g/yocto-announce/message/215)  
 - [Yocto Project 3.4 (Honister)](https://lists.yoctoproject.org/g/yocto-announce/message/229)  
 - [Yocto Project 4.0 (Kirkstone)](https://lists.yoctoproject.org/g/yocto/message/56902)	  
+- [Yocto Project 4.1 (Langdale)](https://lists.yoctoproject.org/g/yocto/message/58398)	  
 - [Wind River Linux 9](https://docs.windriver.com/category/os-wind_river_linux_9)
 - [Wind River Linux LTS17](https://docs.windriver.com/category/os_linux_lts_17)
 - [Wind River Linux LTS18](https://docs.windriver.com/category/os_linux_lts_18)
@@ -22,10 +23,6 @@ The meta-wr-sbom OpenEmbedded/Yocto layer is used to generate Software Bill of M
 - [Wind River Linux LTS21](https://docs.windriver.com/category/os_linux_lts_21)
 - [Wind River Linux LTS22](https://docs.windriver.com/category/os_linux_lts_22)
 
-
-----------------------------------------------------------------------------------------
-## Requirements
-Python 3 version >= 3.7 must be installed on build host machine.  
 
 
 ----------------------------------------------------------------------------------------
@@ -37,9 +34,14 @@ git clone https://github.com/Wind-River/meta-wr-sbom
 ```
 
 ### Adding the meta-wr-sbom layer to Your Build
-At the top-level directory of your yocto build workspace, you can add the meta-wr-sbom layer to the build system by performing the following command:
+Add the layer path into conf/bblayers.conf file:
 ```bash
-source ../meta-wr-sbom/init_create_sbom
+BBLAYERS += "/xxx/.../meta-wr-sbom"
+```
+
+Add INHERIT option in conf/local.conf:
+```bash
+INHERIT += "sls-create-spdx"
 ```
 
 ### Generating SBOM File
@@ -50,49 +52,6 @@ bitbake ${image_name}
 The SBOM file of your yocto project will be generated as  **tmp/deploy/images/${machine}/${image_name}.spdx.json**.   
 ***************************************************************************************
 
-***************************************************************************************
-
-# Supported Binary-based Linux Distribution Versions
-- [Debian 7 (Wheezy)](https://www.debian.org/releases/wheezy/)  
-- [Debian 8 (Jessie)](https://www.debian.org/releases/jessie/)  
-- [Debian 9 (Stretch)](https://www.debian.org/releases/stretch/)  
-- [Debian 10 (Buster)](https://www.debian.org/releases/buster/)  
-- [Debian 11 (Bullseye)](https://www.debian.org/releases/bullseye/)  
-- [Debian 12 (Bookworm)](https://www.debian.org/releases/bookworm/)  
-- [Red Hat Enterprise Linux 5 (Tikanga)](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/5)  
-- [Red Hat Enterprise Linux 6 (Santiago)](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6)  
-- [Red Hat Enterprise Linux 7 (Maipo)](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7)  
-- [Red Hat Enterprise Linux 8 (Ootpa)](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8)  
-- [CentOS 5](https://wiki.centos.org/Manuals/ReleaseNotes/CentOS5.11)  
-- [CentOS 6](https://wiki.centos.org/Manuals/ReleaseNotes/CentOS6.10)  
-- [CentOS 7](https://wiki.centos.org/Manuals/ReleaseNotes/CentOS7.2003)  
-- [CentOS 8](https://wiki.centos.org/Manuals/ReleaseNotes/CentOSLinux8)  
-
-## Requirements
-Bash shell in Linux.
-
-## Quick Start
-Download the shell script to the target Linux host and run the script in the host.
-
-### Getting shell script
-Download the shell script to the home directory of current user on target Linux host
-```bash
-cd ~
-wget https://raw.githubusercontent.com/Wind-River/meta-wr-sbom/main/tools/gen_os_pkgs_manifest.sh
-```
-
-### Generating manifest file
-At the home directory, perform the following commands:
-```bash
-chmod u+rx gen_os_pkgs_manifest.sh
-./gen_os_pkgs_manifest.sh
-```
-Or specify a root filesystem path:
-```bash
-./gen_os_pkgs_manifest.sh -r /path/to/rootfs
-```
-The manifest file will be generated as  **os_packages.manifest.txt** in the current directory.
-If the file is already present, the generated filename will be changed to **os_packages.manifest.txt.xxxxxxxxxx.txt**
 
 # Legal Notices
 
