@@ -530,13 +530,8 @@ def main():
     
     if license_manifest_dir:
         pkgsInfo = getInstalledPkgs(license_manifest_file)
-    elif "rm_work" not in env_data["INHERIT"]:
-        if not os.path.exists(env_data["IMAGE_ROOTFS"]):
-            print("The IMAGE_ROOTFS path %s not exists." % env_data["IMAGE_ROOTFS"])
-            exit(1)
-        pkgsInfo = compareInstalledPkgs()
     else:
-        print("Fail to found license manifest and IMAGE_ROOTFS path.")
+        print("Fail to found license manifest.")
         exit(1)
 
     generate_sbom(pkgsInfo)
