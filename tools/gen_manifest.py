@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 #
 # Copyright OpenEmbedded Contributors
 # Copyright (C) 2023 Wind River Systems, Inc.
@@ -10,7 +10,7 @@
 # Prerequisite:
 #   1. Enter your project top directory.
 #   2. Fully build your project.
-#   3. For Wind River Linux 6, 7 and 8 versions, execute "make bbs".
+#   3. For Wind River Linux 5, 6, 7 and 8 versions, execute "make bbs" first to enter yocto mode.
 #
 #
 # Execute the script:
@@ -22,6 +22,7 @@
 #####################################################################################
 
 
+from __future__ import absolute_import
 import os
 import sys
 import datetime
@@ -44,7 +45,9 @@ class _Property(object):
     class
     """
 
-    def __init__(self, *, default=None):
+    def __init__(self, **_3to2kwargs):
+        if 'default' in _3to2kwargs: default = _3to2kwargs['default']; del _3to2kwargs['default']
+        else: default = None
         self.default = default
 
     def setdefault(self, dest, name):
@@ -58,7 +61,7 @@ class _String(_Property):
     """
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super(_String, self).__init__(**kwargs)
 
     def set_property(self, attrs, name):
         def get_helper(obj):
@@ -82,7 +85,7 @@ class _Object(_Property):
     """
 
     def __init__(self, cls, **kwargs):
-        super().__init__(**kwargs)
+        super(_Object, self).__init__(**kwargs)
         self.cls = cls
 
     def set_property(self, attrs, name):
@@ -109,7 +112,7 @@ class _ListProperty(_Property):
     """
 
     def __init__(self, prop, **kwargs):
-        super().__init__(**kwargs)
+        super(_ListProperty, self).__init__(**kwargs)
         self.prop = prop
 
     def set_property(self, attrs, name):
@@ -133,7 +136,7 @@ class _StringList(_ListProperty):
     """
 
     def __init__(self, **kwargs):
-        super().__init__(_String(), **kwargs)
+        super(_StringList, self).__init__(_String(), **kwargs)
 
 
 class _ObjectList(_ListProperty):
@@ -142,7 +145,7 @@ class _ObjectList(_ListProperty):
     """
 
     def __init__(self, cls, **kwargs):
-        super().__init__(_Object(cls), **kwargs)
+        super(_ObjectList, self).__init__(_Object(cls), **kwargs)
 
 
 class MetaSPDXObject(type):
@@ -159,10 +162,11 @@ class MetaSPDXObject(type):
                 attrs["_properties"][key] = prop
                 prop.set_property(attrs, key)
 
-        return super().__new__(mcls, name, bases, attrs)
+        return super(MetaSPDXObject, mcls).__new__(mcls, name, bases, attrs)
 
 
-class SPDXObject(metaclass=MetaSPDXObject):
+class SPDXObject(object):
+    __metaclass__ = MetaSPDXObject
     """
     The base SPDX object; all SPDX spec classes must derive from this class
     """
@@ -179,7 +183,7 @@ class SPDXObject(metaclass=MetaSPDXObject):
 
     def __setattr__(self, name, value):
         if name in self._properties or name == "_spdx":
-            super().__setattr__(name, value)
+            super(SPDXObject, self).__setattr__(name, value)
             return
         raise KeyError("%r is not a valid SPDX property" % name)
 
@@ -291,15 +295,21 @@ class SPDXDocument(SPDXObject):
     hasExtractedLicensingInfos = _ObjectList(SPDXExtractedLicensingInfo)
 
     def __init__(self, **d):
-        super().__init__(**d)
+        super(SPDXDocument, self).__init__(**d)
 
-    def to_json(self, f, *, sort_keys=False, indent=2, separators=None):
+    def to_json(self, f, **_3to2kwargs):
+        if 'separators' in _3to2kwargs: separators = _3to2kwargs['separators']; del _3to2kwargs['separators']
+        else: separators = None
+        if 'indent' in _3to2kwargs: indent = _3to2kwargs['indent']; del _3to2kwargs['indent']
+        else: indent = 2
+        if 'sort_keys' in _3to2kwargs: sort_keys = _3to2kwargs['sort_keys']; del _3to2kwargs['sort_keys']
+        else: sort_keys = False
         class Encoder(json.JSONEncoder):
             def default(self, o):
                 if isinstance(o, SPDXObject):
                     return o.serializer()
 
-                return super().default(o)
+                return super(Encoder, self).default(o)
 
         sha1 = hashlib.sha1()
         for chunk in Encoder(
@@ -317,7 +327,11 @@ class SPDXDocument(SPDXObject):
     def from_json(cls, f):
         return cls(**json.load(f))
 
-    def add_relationship(self, _from, relationship, _to, *, comment=None, annotation=None):
+    def add_relationship(self, _from, relationship, _to, **_3to2kwargs):
+        if 'annotation' in _3to2kwargs: annotation = _3to2kwargs['annotation']; del _3to2kwargs['annotation']
+        else: annotation = None
+        if 'comment' in _3to2kwargs: comment = _3to2kwargs['comment']; del _3to2kwargs['comment']
+        else: comment = None
         if isinstance(_from, SPDXObject):
             from_spdxid = _from.SPDXID
         else:
