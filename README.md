@@ -27,6 +27,10 @@ The meta-wr-sbom OpenEmbedded/Yocto layer is used to generate Software Bill of M
 
 ----------------------------------------------------------------------------------------
 ## Quick Start
+
+### Requirement
+Please create a new project to apply this tool to generate SBOM.
+
 ### Getting meta-wr-sbom
 Clone the meta-wr-sbom repository (or unpack an archive of it) into the top-level directory of your yocto build project:
 ```bash
