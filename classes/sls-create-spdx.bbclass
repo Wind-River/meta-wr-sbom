@@ -883,48 +883,39 @@ python image_combine_spdx() {
         return bb_version_to_yocto_version[bb_ver[0]+'.'+bb_ver[1]]
 
 
-    def getInstalledPkgs(license_manifest):
+    def getInstalledPkgs(packages):
+        import oe.packagedata
+
+        pkg_dic = {}
         recipeDict = {}
-    
-        f_license_manifest = open(license_manifest)
-        for line in f_license_manifest:
-            line_data = line.strip().split(":")
-            if line_data[0] == "PACKAGE NAME":
-                package_name = line_data[1].strip()
-            if line_data[0] == "PACKAGE VERSION":
-                package_version = line_data[1].strip()
-            if line_data[0] == "RECIPE NAME":
-                recipe_name = line_data[1].strip()
-            if line_data[0] == "LICENSE":
-                declared_license = line_data[1].strip()
-            if line.strip() == '' and package_name:
-                pkgInfo = dict()
-                if recipe_name not in recipeDict.keys():
-                    recipeDict[recipe_name] = {}
-                if package_version not in recipeDict[recipe_name].keys():
-                    recipeDict[recipe_name][package_version] = []
-    
-                pkgInfo["name"] = package_name
-                pkgInfo["versionInfo"] = package_version
-                pkgInfo["recipe"] = recipe_name
-                pkgInfo["licenseDeclared"] = declared_license
-                package_name = ''
-                recipeDict[recipe_name][package_version].append(pkgInfo)
-        if package_name:            #if the last line is not empty
+        for pkg in sorted(packages):
+            pkg_info = os.path.join(d.getVar('PKGDATA_DIR', True), 'runtime-reverse', pkg)
+            pkg_name = os.path.basename(os.readlink(pkg_info))
+
+            pkg_dic[pkg_name] = oe.packagedata.read_pkgdatafile(pkg_info)
+            if not "LICENSE" in pkg_dic[pkg_name].keys():
+                pkg_lic_name = "LICENSE_" + pkg_name
+                if pkg_lic_name not in pkg_dic[pkg_name].keys():
+                    pkg_lic_name = "LICENSE:" + pkg_name
+                pkg_dic[pkg_name]["LICENSE"] = pkg_dic[pkg_name][pkg_lic_name]
+
+        for package_name in pkg_dic.keys():
+            package_version = pkg_dic[package_name]["PV"]
+            recipe_name = pkg_dic[package_name]["PN"]
+            declared_license = pkg_dic[package_name]["LICENSE"]
+
             pkgInfo = dict()
             if recipe_name not in recipeDict.keys():
                 recipeDict[recipe_name] = {}
             if package_version not in recipeDict[recipe_name].keys():
                 recipeDict[recipe_name][package_version] = []
-    
+
             pkgInfo["name"] = package_name
             pkgInfo["versionInfo"] = package_version
             pkgInfo["recipe"] = recipe_name
             pkgInfo["licenseDeclared"] = declared_license
-            package_name = ''
             recipeDict[recipe_name][package_version].append(pkgInfo)
-    
-        f_license_manifest.close()
+
         return recipeDict
 
 
@@ -1026,8 +1017,7 @@ python image_combine_spdx() {
 
     recipe_spdx_path = os.path.join(str(deploy_dir_spdx), "recipes")
 
-    license_manifest_file = os.path.join(d.getVar("LICENSE_DIRECTORY", True), d.getVar("IMAGE_NAME", True), "license.manifest")
-    pkgsInfo = getInstalledPkgs(license_manifest_file)
+    pkgsInfo = getInstalledPkgs(packages)
 
     for name in pkgsInfo.keys():
         if name.startswith("packagegroup-") or \
