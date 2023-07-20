@@ -43,11 +43,6 @@ Add the layer path into conf/bblayers.conf file:
 BBLAYERS += "/xxx/.../meta-wr-sbom"
 ```
 
-Add INHERIT option in conf/local.conf:
-```bash
-INHERIT += "sls-create-spdx"
-```
-
 ### Generating SBOM File
 ```bash
 bitbake ${image_name}
