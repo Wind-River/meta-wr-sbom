@@ -51,9 +51,17 @@ bitbake ${image_name}
 The SBOM file of your yocto project will be generated as  **tmp/deploy/images/${machine}/${image_name}.spdx.json**.   
 ***************************************************************************************
 
-## Generate Petalinux 2019.2 SBOM
+## Generate Petalinux SBOM
 
-[Generate petalinux 2019.2 SBOM](petalinux-2019-sbom.md) 
+### Supported Petalinux Versions
+ 
+- [petalinux v2019.2](https://japan.xilinx.com/support/download/index.html/content/xilinx/ja/downloadNav/embedded-design-tools/archive.html)
+- [petalinux v2022.1](https://japan.xilinx.com/support/download/index.html/content/xilinx/ja/downloadNav/embedded-design-tools/2022-1.html)
+- [petalinux v2022.2](https://japan.xilinx.com/support/download/index.html/content/xilinx/ja/downloadNav/embedded-design-tools/2022-2.html)
+- [petalinux v2023.1](https://japan.xilinx.com/support/download/index.html/content/xilinx/ja/downloadNav/embedded-design-tools/2023-1.html)
+
+### Generating SBOM File
+[Generate petalinux SBOM](petalinux-sbom.md) 
 
 
 ***************************************************************************************

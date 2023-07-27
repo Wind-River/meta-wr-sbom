@@ -1,6 +1,6 @@
-# How to build Petalinux v2019.2 with `meta-wr-sbom` layer
+# How to build Petalinux with `meta-wr-sbom` layer
 
-## Install Petalinux
+## Install Petalinux (Petalinux v2019.2 and zcu102 BSP as example)
 
 ### Download Petalinux v2019.2 and BSP file
 
@@ -37,7 +37,7 @@ $ mkdir -p /opt/petalinux/workspace
 $ cd /opt/petalinux/workspace
 ```
 
-**NOTE**: You can choice where to build your new project, but you need to make sure you have proper permission to the workspace place and have enough free disk space (about 12G).
+**NOTE**: You can choice where to build your new project, but you need to make sure you have proper permission to the workspace place and have enough free disk space.
 
 * initialize build environment
 
@@ -111,20 +111,6 @@ See Section Adding Layers of Chapter 8 of [PetaLinux documentation](https://docs
       ```
       ERROR: update-rc.d-0.8-r0 do_configure: Taskhash mismatch a085926854bd559e523f5a06c898d165 versus 9312c768c12c78e5dd132174fa9101d0 for .../petalinux/2019.02/components/yocto/source/aarch64/layers/core/meta/recipes-core/update-rc.d/update-rc.d_0.8.bb.do_configure
       ```
-    + append the following line
-      ```
-      INHERIT += "sls-create-spdx"
-      ```
-
-      If you see the following error when running `petalinux-build`:
-      ```
-      [INFO] building project
-      [INFO] sourcing bitbake
-      ERROR: Failed to add meta-plnx-generated layer:...
-      ERROR: Failed to build project
-      ```
-      
-      Try to remove the above `INHERIT` statement from `build/conf/local.conf` and append it to `meta-wr-sbom/conf/layer.conf`.
 
 * build new project
 
