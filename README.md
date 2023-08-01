@@ -55,13 +55,13 @@ The SBOM file of your yocto project will be generated as  **tmp/deploy/images/${
 
 ### Supported Petalinux Versions
  
-- [petalinux v2019.2](https://japan.xilinx.com/support/download/index.html/content/xilinx/ja/downloadNav/embedded-design-tools/archive.html)
-- [petalinux v2022.1](https://japan.xilinx.com/support/download/index.html/content/xilinx/ja/downloadNav/embedded-design-tools/2022-1.html)
-- [petalinux v2022.2](https://japan.xilinx.com/support/download/index.html/content/xilinx/ja/downloadNav/embedded-design-tools/2022-2.html)
-- [petalinux v2023.1](https://japan.xilinx.com/support/download/index.html/content/xilinx/ja/downloadNav/embedded-design-tools/2023-1.html)
+- [Petalinux v2019.2](https://support.xilinx.com/s/article/72950?language=en_US)
+- [Petalinux v2022.1](https://support.xilinx.com/s/article/000033799?language=en_US)
+- [Petalinux v2022.2](https://support.xilinx.com/s/article/000034483?language=en_US)
+- [Petalinux v2023.1](https://support.xilinx.com/s/article/000035006?language=en_US)
 
 ### Generating SBOM File
-[Generate petalinux SBOM](petalinux-sbom.md) 
+[Generate Petalinux SBOM](petalinux-sbom.md) 
 
 
 ***************************************************************************************
