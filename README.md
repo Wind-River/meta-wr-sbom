@@ -1,5 +1,7 @@
 # Overview
-The meta-wr-sbom OpenEmbedded/Yocto layer is used to generate Software Bill of Materials (SBOM) of [Software Package Data Exchange (SPDX)](https://spdx.org/tools) format for Yocto-based projects. The SBOM file created by the layer using SPDX v2.2 specification will include accurate identification of software components, explicit mapping of relationships between components, and the association of security and licensing information with each component.
+The meta-wr-sbom OpenEmbedded/Yocto layer is used to generate Software Bill of Materials (SBOM) of [Software Package Data Exchange (SPDX)](https://spdx.org/tools) format for Yocto-based projects. The SBOM file created by the layer using SPDX v2.2 specification will include accurate identification of software components, explicit mapping of relationships between components, and the association of security and licensing information with each component.  
+Besides, vulnerability detection can be tried using a scanner like [Wind River Scanning Tool](https://studio.windriver.com/scan).  
+For commercial support options with meta-wr-sbom or Wind River Scanning Tool, please contact [Wind River](https://support2.windriver.com/).  
 
 ----------------------------------------------------------------------------------------
 # Supported Yocto Project Versions
