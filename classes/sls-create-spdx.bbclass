@@ -1041,8 +1041,13 @@ python image_combine_spdx() {
     with image_spdx_path.open("wb") as f:
         doc.to_json(f, sort_keys=True)
 
-    image_spdx_link = imgdeploydir / (image_link_name + ".spdx.json")
-    image_spdx_link.symlink_to(os.path.relpath(str(image_spdx_path), str(image_spdx_link.parent)))
+    def make_image_link(target_path, suffix):
+        link = imgdeploydir / (image_link_name + suffix)
+        if link.exists():
+            os.remove(str(link))
+        link.symlink_to(os.path.relpath(str(target_path), str(link.parent)))
+
+    make_image_link(image_spdx_path, ".spdx.json")
 
     num_threads = int(d.getVar("BB_NUMBER_THREADS", True))
 
@@ -1110,10 +1115,6 @@ python image_combine_spdx() {
         info.gname = "root"
 
         tar.addfile(info, fileobj=index_str)
-
-    def make_image_link(target_path, suffix):
-        link = imgdeploydir / (image_link_name + suffix)
-        link.symlink_to(os.path.relpath(str(target_path), str(link.parent)))
 
     make_image_link(spdx_tar_path, ".spdx.tar.xz")
 
