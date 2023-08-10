@@ -32,6 +32,8 @@ SPDX_LICENSES ??= "${WRSBOM_LAYER}/meta/files/spdx-licenses.json"
 
 BB_HASH_IGNORE_MISMATCH = '1'
 
+SPDX_BLACKLIST ??= "external-arm-toolchain"
+
 do_image_complete[depends] = "virtual/kernel:do_create_spdx"
 
 def get_doc_namespace(d, doc):
@@ -337,12 +339,28 @@ def add_package_sources_from_debug(d, package_doc, spdx_package, package, packag
 
             package_doc.add_relationship(pkg_file, "GENERATED_FROM", ref_id, comment=debugsrc)
 
+def spdx_deploy_path(d, subdir, name):
+    import os.path
+    import glob
+
+    multiconfig = d.getVar('BBMULTICONFIG', True)
+    deploy_dir_spdx = d.getVar('DEPLOY_DIR_SPDX', True)
+
+    if multiconfig == '':
+        return os.path.join(deploy_dir_spdx, subdir, name)
+
+    try:
+        deploy_path = glob.glob(os.path.join(deploy_dir_spdx, "..", "*", subdir, name))[0]
+    except IndexError:
+        # FIXME: This should not happen.
+        deploy_path = ""
+
+    return deploy_path
+
 def collect_dep_recipes(d, doc, spdx_recipe):
     from pathlib import Path
     import oe_sbom.sbom
     import oe_sbom.spdx
-
-    deploy_dir_spdx = Path(d.getVar("DEPLOY_DIR_SPDX", True))
 
     dep_recipes = []
     taskdepdata = d.getVar("BB_TASKDEPDATA", False)
@@ -351,7 +369,11 @@ def collect_dep_recipes(d, doc, spdx_recipe):
             dep[1] == "do_create_spdx" and dep[0] != d.getVar("PN", True)
     ))
     for dep_pn in deps:
-        dep_recipe_path = deploy_dir_spdx / "recipes" / ("recipe-%s.spdx.json" % dep_pn)
+        dep_recipe_path = spdx_deploy_path(d, "recipes", ("recipe-%s.spdx.json" % dep_pn))
+        if dep_recipe_path == '':
+            # FIXME: This should not happen.
+            continue
+        dep_recipe_path = Path(dep_recipe_path)
 
         spdx_dep_doc, spdx_dep_sha1 = oe_sbom.sbom.read_doc(dep_recipe_path)
 
@@ -620,16 +642,31 @@ addtask do_create_spdx after do_package do_packagedata do_unpack before do_build
 SSTATETASKS += "do_create_spdx"
 do_create_spdx[sstate-inputdirs] = "${SPDXDEPLOY}"
 do_create_spdx[sstate-outputdirs] = "${DEPLOY_DIR_SPDX}"
+do_create_spdx[sstate-lockfile] = "${WORKDIR}/create_spdx_sstate.lock"
 
 python do_create_spdx_setscene () {
     sstate_setscene(d)
 }
 addtask do_create_spdx_setscene
 
-do_create_spdx[dirs] = "${SPDXDEPLOY} ${SPDXWORK}"
+do_create_spdx[dirs] = "${SPDXWORK}"
 do_create_spdx[cleandirs] = "${SPDXDEPLOY} ${SPDXWORK}"
 do_create_spdx[depends] += "${PATCHDEPENDENCY}"
 do_create_spdx[deptask] = "do_create_spdx"
+do_create_spdx[lockfiles] = "${SPDXWORK}/create_spdx.lock"
+
+def spdx_disable_task(d, task):
+    pn = d.getVar('PN', True)
+    is_native = bb.data.inherits_class('native', d) or pn.endswith('-native')
+    is_blocked = pn in d.getVar('SPDX_BLACKLIST', True).split()
+    current_mc = d.getVar('BB_CURRENT_MC')
+
+    if (is_native and current_mc != '') or is_blocked:
+        d.setVarFlag(task, 'noexec', '1')
+
+python () {
+    spdx_disable_task(d, 'do_create_spdx')
+}
 
 def collect_package_providers(d):
     from pathlib import Path
@@ -792,6 +829,7 @@ addtask do_create_runtime_spdx after do_create_spdx before do_build do_rm_work
 SSTATETASKS += "do_create_runtime_spdx"
 do_create_runtime_spdx[sstate-inputdirs] = "${SPDXRUNTIMEDEPLOY}"
 do_create_runtime_spdx[sstate-outputdirs] = "${DEPLOY_DIR_SPDX}"
+do_create_runtime_spdx[sstate-lockfile] = "${WORKDIR}/create_runtime_spdx_sstate.lock"
 
 python do_create_runtime_spdx_setscene () {
     sstate_setscene(d)
@@ -801,6 +839,11 @@ addtask do_create_runtime_spdx_setscene
 do_create_runtime_spdx[dirs] = "${SPDXRUNTIMEDEPLOY}"
 do_create_runtime_spdx[cleandirs] = "${SPDXRUNTIMEDEPLOY}"
 do_create_runtime_spdx[rdeptask] = "do_create_spdx"
+do_create_runtime_spdx[lockfiles] = "${SPDXRUNTIMEDEPLOY}/create_runtime_spdx.lock"
+
+python () {
+    spdx_disable_task(d, 'do_create_runtime_spdx')
+}
 
 def spdx_get_src(d):
     """
@@ -1097,7 +1140,11 @@ python image_combine_spdx() {
                 })
 
             for ref in doc.externalDocumentRefs:
-                ref_path = deploy_dir_spdx / "by-namespace" / ref.spdxDocument.replace("/", "_")
+                ref_path = spdx_deploy_path(d, 'by-namespace', ref.spdxDocument.replace("/", "_"))
+                if ref_path == '':
+                    # FIXME: This should not happen.
+                    continue
+                ref_path = Path(ref_path)
                 collect_spdx_document(ref_path)
 
         collect_spdx_document(image_spdx_path)
