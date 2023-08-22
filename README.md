@@ -53,6 +53,22 @@ bitbake ${image_name}
 The SBOM file of your yocto project will be generated as  **tmp/deploy/images/${machine}/${image_name}.spdx.json**.   
 ***************************************************************************************
 
+## Generate Wind River Linux SBOM with earlier versions
+
+The gen_spdx.py script is used for generating SBOM for WRLinux 5 - 8.
+
+### Supported Wind River Linux versions
+
+- [Wind River Linux 5](https://docs.windriver.com/category/os-wind_river_linux_5)
+- [Wind River Linux 6](https://docs.windriver.com/category/os-wind_river_linux_6)
+- [Wind River Linux 7](https://docs.windriver.com/category/os-wind_river_linux_7)
+- [Wind River Linux 8](https://docs.windriver.com/category/os-wind_river_linux_8)
+
+### Generating SBOM File
+[Generate the old versions WRLinux SBOM](tools/USE_GEN_MANIFEST_PY.md) 
+
+***************************************************************************************
+
 ## Generate Petalinux SBOM
 
 ### Supported Petalinux Versions

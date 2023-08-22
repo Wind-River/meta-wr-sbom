@@ -7,18 +7,24 @@
 #
 
 #####################################################################################
+# The script is use to generate SBOM for WRlinux 5, 6, 7 and 8.
+#
 # Prerequisite:
 #   1. Enter your project top directory.
 #   2. Fully build your project.
-#   3. For Wind River Linux 5, 6, 7 and 8 versions, execute "make bbs" first to enter yocto mode.
+#   3. Execute "make bbs" to enter bitbake_build directory and enter yocto mode.
 #
 #
-# Execute the script:
-#   ${the_path}/gen_manifest.py target_image_name;
+# Execute the script to generate the specified image SBOM:
+#   python ./gen_manifest.py target_image_name
+# Or generate default image SBOM:
+#   python ./gen_manifest.py
 #
 # The target_image_name is the image target to generate manifest, such as 'wrlinux-image-small'.
+# The default image is the target image of 'make fs' command.
+# The project top directory is the path where [config_local.sh] file located.
 #
-# If the script execute success, the manifest will generate at current directory.
+# If the script execute success, the manifest will generate under current directory.
 #####################################################################################
 
 
@@ -30,12 +36,21 @@ import json
 import hashlib
 import itertools
 
-if len(sys.argv) < 2:
-    print("Please specify a image target to generate the sbom.")
-    #print("Project directory means the folder where [config.log] and [Makefile] file located.")
-    sys.exit(1)
-
-target_image = sys.argv[1]
+if len(sys.argv) == 2:
+    #Specified a image target to generate the sbom.
+    target_image = sys.argv[1]
+elif len(sys.argv) == 1:
+    if os.path.exists("../config_local.sh"):
+        target_image_info = os.popen("grep 'bitbake_image=' ../config_local.sh").readline().strip().split('=')
+    elif os.path.exists("../build/Makefile"):
+        target_image_info = os.popen("grep 'BUILD_IMAGE=' ../build/Makefile").readline().strip().split('=')
+    else:
+        sys.exit("Find no ../config_local.sh, please confirm the Wind River linux version is in support list.")
+    
+    if target_image_info:
+        target_image = target_image_info[1]
+    else:
+        sys.exit("Fail to confirm the target image name to generate the manifest.")
 
 SPDX_VERSION = "2.2"
 
