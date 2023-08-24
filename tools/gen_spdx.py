@@ -543,6 +543,11 @@ def main():
             line_data = line.split("=")
             env_data[line_data[0]] = line_data[1].strip().strip('"')
     
+    if not env_data:
+        os.system("bitbake %s -e > bitbake_log" % target_image)
+        print("Error: bitbake failed to get yocto project environment data. Please check ./bitbake_log to resolve the error.")
+        exit(1)
+
     env_metadata.close()
     del env_metadata
     image_name_arch = env_data["IMAGE_NAME"][0:env_data["IMAGE_NAME"].rfind('-')]
