@@ -277,7 +277,7 @@ dict = {"INTRINSICS_GNU" : "OnlyForVx",  # many of them from SR0660   # use the 
         "SDL" : "libsdl",
         "SQLITE" : "sqlite3",
         "TCPLAY" : "tc-play",
-        "TENSORFLOW_LITE" : "tensorflow-lite",
+        "TENSORFLOW_LITE" : "tensorflow",
         "TPM2_TSS" : "tpm2-tss",
         "UZLIB" : "uzlib",
         "VI_EDITOR" : "OnlyForVx",
@@ -398,7 +398,7 @@ dict = {"INTRINSICS_GNU" : "OnlyForVx",  # many of them from SR0660   # use the 
         "IPNET_FIREWALL" : "ipnet_firewall",
         "IPNET_IPSECIKE" : "ipnet_ipsecike",
         "GDOI" : "OnlyForVx",
-        "IKE" : "OnlyForVx",            # the ike's pkg ver is SubLayer, so use the below ike version
+        "IKE" : "OnlyForVx",            # the ike's pkg ver is SubLayer
         "This" : "OnlyForVx",
         "IPNET_QOS" : "ipnet_qos",
         "IPNET_ROUTEPROTO" : "ipnet_routeproto",
@@ -442,7 +442,7 @@ dict = {"INTRINSICS_GNU" : "OnlyForVx",  # many of them from SR0660   # use the 
         "TPM" : "OnlyForVx",
         "DISK_ENCRYPTION" : "disk-encryption",
         "LDAPC" : "openldap",
-        "OP_TEE" : "optee-client",
+        "OP_TEE" : "op-tee",
         "DEMO" : "OnlyForVx",
         "SECURE_LOADER" : "OnlyForVx",
         "SECURITY_EVENT" : "OnlyForVx",
@@ -459,7 +459,7 @@ dict = {"INTRINSICS_GNU" : "OnlyForVx",  # many of them from SR0660   # use the 
         "ERF" : "OnlyForVx",
         "JOBQUEUE" : "OnlyForVx",
         "REMOTEPROC" : "OnlyForVx",
-        "RPC" : "OnlyForVx",          # the rpc's pkg ver is SubLayer, so use the below rpc version
+        "RPC" : "OnlyForVx",          # the rpc's pkg ver is SubLayer 
         "RPMSG" : "OnlyForVx",
         "SOCKET" : "OnlyForVx",
         "UN" : "OnlyForVx",
@@ -493,7 +493,7 @@ dict = {"INTRINSICS_GNU" : "OnlyForVx",  # many of them from SR0660   # use the 
         "LOADER" : "OnlyForVx",
         "OSTOOLS" : "OnlyForVx",
         "RBUFF" : "OnlyForVx",
-        "RUST" : "OnlyForVx",           # the rust's pkg ver is SubLayer, so use the below rust version
+        "RUST" : "OnlyForVx",           # the rust's pkg ver is SubLayer
         "SHELL" : "OnlyForVx",
         "UNIX" : "OnlyForVx",
         "UTF" : "OnlyForVx",
@@ -504,7 +504,6 @@ dict = {"INTRINSICS_GNU" : "OnlyForVx",  # many of them from SR0660   # use the 
 
 
 def _get_os_version():
-
     vx_version = 'NULL'
 
     # if the version is 21 or 22.xx
@@ -587,6 +586,7 @@ def _get_info():
                         sys.exit()
 
                     #print(tmp1,tmp2)
+                    sys.stdout.write(".")
 
                     #fp_write.write(os.path.join(root,file) + '\n')
                     #print(dict.get(tmp1, 'FindANewPackage'))
@@ -617,22 +617,7 @@ def _get_info():
                             tmp2 = "9"
                     fp_write.write(pkg_name + ' ' + tmp2 + '\n')
 
-    # add some package, which organized not by package, but still have CVEs. Note, the version info just use to follow the Thor format.
-    fp_write.write("u-boot" + ' ' + "1.0" + '\n')
-    fp_write.write("eclipse" + ' ' + "1.0" + '\n')
-    fp_write.write("calloc" + ' ' + "1.0" + '\n')
-    fp_write.write("memory" + ' ' + "1.0" + '\n')
-    fp_write.write("gnu" + ' ' + "1.0" + '\n')
-    fp_write.write("gcc" + ' ' + "1.0" + '\n')
-    fp_write.write("java-se" + ' ' + "1.0" + '\n')
-    fp_write.write("hw-arch" + ' ' + "1.0" + '\n')
-    fp_write.write("wdb" + ' ' + "1.0" + '\n')
-
-    # add some package, which have CVEs, but the package version is SubLayer in the source. Note, the version info just use to follow the Thor format.
-    fp_write.write("http" + ' ' + "1.0" + '\n')
-    fp_write.write("ike" + ' ' + "1.0" + '\n')
-    fp_write.write("rpc" + ' ' + "1.0" + '\n')
-    fp_write.write("rust" + ' ' + "1.0" + '\n')
+    fp_write.write("VxWorks" + '\n')
 
     fp_write.close()
     print("\nResearching Done, please send the pkg_ver_info.txt to Wind River, thanks")
@@ -646,10 +631,9 @@ def _get_info():
         for i in need_to_investigate:
             print(i)
 
-
 def main():
     _get_info()
 
-
 if __name__ == "__main__":
     main()
+
