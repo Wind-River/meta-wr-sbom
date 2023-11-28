@@ -5,25 +5,27 @@ For commercial support options with meta-wr-sbom or Wind River Scanning Tool, pl
 
 ----------------------------------------------------------------------------------------
 # Supported Yocto Project Versions
-- [Yocto Project 2.2 (Morty)](https://www.yoctoproject.org/pipermail/yocto-announce/2016-November/000101.html)  
-- [Yocto Project 2.3 (Pyro)](https://lists.yoctoproject.org/pipermail/yocto-announce/2017-May/000112.html)  
-- [Yocto Project 2.4 (Rocko)](https://lists.yoctoproject.org/pipermail/yocto-announce/2017-October/000125.html)   
-- [Yocto Project 2.5 (Sumo)](https://lists.yoctoproject.org/pipermail/yocto-announce/2018-May/000136.html)  
-- [Yocto Project 2.6 (Thud)](https://lists.yoctoproject.org/pipermail/yocto-announce/2018-November/000147.html)  
-- [Yocto Project 2.7 (Warrior)](https://lists.yoctoproject.org/pipermail/yocto/2019-May/045028.html)  
-- [Yocto Project 3.0 (Zeus)](https://lists.yoctoproject.org/pipermail/yocto/2019-October/047111.html)
-- [Yocto Project 3.1 (Dunfell)](https://lists.yoctoproject.org/g/yocto/message/49201)  
-- [Yocto Project 3.2 (Gatesgarth)](https://lists.yoctoproject.org/g/yocto/message/51262)  
-- [Yocto Project 3.3 (Hardknott)](https://lists.yoctoproject.org/g/yocto-announce/message/215)  
-- [Yocto Project 3.4 (Honister)](https://lists.yoctoproject.org/g/yocto-announce/message/229)  
-- [Yocto Project 4.0 (Kirkstone)](https://lists.yoctoproject.org/g/yocto/message/56902)	  
+- [Yocto Project 4.2 (Mickledore)](https://lists.yoctoproject.org/g/yocto/message/59892)	  
 - [Yocto Project 4.1 (Langdale)](https://lists.yoctoproject.org/g/yocto/message/58398)	  
-- [Wind River Linux 9](https://docs.windriver.com/category/os-wind_river_linux_9)
-- [Wind River Linux LTS17](https://docs.windriver.com/category/os_linux_lts_17)
-- [Wind River Linux LTS18](https://docs.windriver.com/category/os_linux_lts_18)
-- [Wind River Linux LTS19](https://docs.windriver.com/category/os_linux_lts_19)
-- [Wind River Linux LTS21](https://docs.windriver.com/category/os_linux_lts_21)
+- [Yocto Project 4.0 (Kirkstone)](https://lists.yoctoproject.org/g/yocto/message/56902)	  
+- [Yocto Project 3.4 (Honister)](https://lists.yoctoproject.org/g/yocto-announce/message/229)  
+- [Yocto Project 3.3 (Hardknott)](https://lists.yoctoproject.org/g/yocto-announce/message/215)  
+- [Yocto Project 3.2 (Gatesgarth)](https://lists.yoctoproject.org/g/yocto/message/51262)  
+- [Yocto Project 3.1 (Dunfell)](https://lists.yoctoproject.org/g/yocto/message/49201)  
+- [Yocto Project 3.0 (Zeus)](https://lists.yoctoproject.org/pipermail/yocto/2019-October/047111.html)
+- [Yocto Project 2.7 (Warrior)](https://lists.yoctoproject.org/pipermail/yocto/2019-May/045028.html)  
+- [Yocto Project 2.6 (Thud)](https://lists.yoctoproject.org/pipermail/yocto-announce/2018-November/000147.html)  
+- [Yocto Project 2.5 (Sumo)](https://lists.yoctoproject.org/pipermail/yocto-announce/2018-May/000136.html)  
+- [Yocto Project 2.4 (Rocko)](https://lists.yoctoproject.org/pipermail/yocto-announce/2017-October/000125.html)   
+- [Yocto Project 2.3 (Pyro)](https://lists.yoctoproject.org/pipermail/yocto-announce/2017-May/000112.html)  
+- [Yocto Project 2.2 (Morty)](https://www.yoctoproject.org/pipermail/yocto-announce/2016-November/000101.html)  
+- [Wind River Linux LTS23](https://docs.windriver.com/category/os_linux_lts_23)
 - [Wind River Linux LTS22](https://docs.windriver.com/category/os_linux_lts_22)
+- [Wind River Linux LTS21](https://docs.windriver.com/category/os_linux_lts_21)
+- [Wind River Linux LTS19](https://docs.windriver.com/category/os_linux_lts_19)
+- [Wind River Linux LTS18](https://docs.windriver.com/category/os_linux_lts_18)
+- [Wind River Linux LTS17](https://docs.windriver.com/category/os_linux_lts_17)
+- [Wind River Linux 9](https://docs.windriver.com/category/os-wind_river_linux_9)
 
 
 
@@ -38,6 +40,13 @@ Clone the meta-wr-sbom repository (or unpack an archive of it) into the top-leve
 ```bash
 git clone https://github.com/Wind-River/meta-wr-sbom
 ```
+
+If the Yocto version is lower than 4.2, or the Wind River Linux version is lower than LTS23, please **SKIP** this step. Otherwise, perform below checkout command:
+```bash
+cd meta-wr-sbom
+git checkout 4.2_or_higher
+```
+
 
 ### Adding the meta-wr-sbom layer to Your Build
 Add the layer path into conf/bblayers.conf file:
