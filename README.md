@@ -5,6 +5,7 @@ For commercial support options with meta-wr-sbom or Wind River Scanning Tool, pl
 
 ----------------------------------------------------------------------------------------
 # Supported Yocto Project Versions
+- [Yocto Project 4.3 (Nanbield)](https://lists.yoctoproject.org/g/yocto/message/61647)	  
 - [Yocto Project 4.2 (Mickledore)](https://lists.yoctoproject.org/g/yocto/message/59892)	  
 - [Yocto Project 4.1 (Langdale)](https://lists.yoctoproject.org/g/yocto/message/58398)	  
 - [Yocto Project 4.0 (Kirkstone)](https://lists.yoctoproject.org/g/yocto/message/56902)	  
