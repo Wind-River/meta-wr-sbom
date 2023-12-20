@@ -1063,8 +1063,7 @@ python image_combine_spdx() {
     pkgsInfo = getInstalledPkgs(packages)
 
     for name in pkgsInfo.keys():
-        if name.startswith("packagegroup-") or \
-             name == "base-passwd":
+        if name.startswith("packagegroup-"):
             continue
 
         filename = os.path.join(recipe_spdx_path, "recipe-%s.spdx.json" % name)
