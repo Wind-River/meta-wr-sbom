@@ -451,8 +451,7 @@ def generate_sbom(recipeDict):
         doc.comment = "DISTRO: " + "Yocto-" + get_yocto_version(env_data["BB_VERSION"])
 
     for name in recipeDict.keys():
-        if name == "base-passwd" or \
-            name.startswith("packagegroup-"):
+        if name.startswith("packagegroup-"):
             continue
         for version in recipeDict[name].keys():
             package = SPDXPackage()
