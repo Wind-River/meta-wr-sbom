@@ -41,14 +41,19 @@ if len(sys.argv) == 2:
     target_image = sys.argv[1]
 elif len(sys.argv) == 1:
     if os.path.exists("../config_local.sh"):
-        target_image_info = os.popen("grep 'bitbake_image=' ../config_local.sh").readline().strip().split('=')
+        target_image_info = os.popen("grep '^bitbake_image=' ../config_local.sh").readline().strip().split('=')
+        multilib_info = os.popen("grep '^enable_multilib=' ../config_local.sh").readline().strip().split('=')
     elif os.path.exists("../build/Makefile"):
-        target_image_info = os.popen("grep 'BUILD_IMAGE=' ../build/Makefile").readline().strip().split('=')
+        target_image_info = os.popen("grep '^BUILD_IMAGE\s*=' ../build/Makefile").readline().strip().split('=')
+        multilib_info = os.popen("grep '^MLIB\s*=' ../build/Makefile").readline().strip().split('=')
     else:
         sys.exit("Find no ../config_local.sh, please confirm the Wind River linux version is in support list.")
     
     if target_image_info:
-        target_image = target_image_info[1]
+        if multilib_info:
+            target_image = multilib_info[1].strip() + '-' + target_image_info[1].strip()
+        else:
+            target_image = target_image_info[1].strip()
     else:
         sys.exit("Fail to confirm the target image name to generate the manifest.")
 
