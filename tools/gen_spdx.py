@@ -49,11 +49,11 @@ elif len(sys.argv) == 1:
     else:
         sys.exit("Find no ../config_local.sh, please confirm the Wind River linux version is in support list.")
     
-    if target_image_info:
-        if multilib_info:
-            target_image = multilib_info[1].strip() + '-' + target_image_info[1].strip()
+    if target_image_info[1].strip().strip('"'):
+        if multilib_info[1].strip().strip('"'):
+            target_image = multilib_info[1].strip().strip('"') + '-' + target_image_info[1].strip().strip('"')
         else:
-            target_image = target_image_info[1].strip()
+            target_image = target_image_info[1].strip().strip('"')
     else:
         sys.exit("Fail to confirm the target image name to generate the manifest.")
 
