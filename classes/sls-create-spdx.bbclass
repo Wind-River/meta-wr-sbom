@@ -659,7 +659,7 @@ def spdx_disable_task(d, task):
     pn = d.getVar('PN', True)
     is_native = bb.data.inherits_class('native', d) or pn.endswith('-native')
     is_blocked = pn in d.getVar('SPDX_BLACKLIST', True).split()
-    current_mc = d.getVar('BB_CURRENT_MC')
+    current_mc = d.getVar('BB_CURRENT_MC', True)
 
     if (is_native and current_mc != '') or is_blocked:
         d.setVarFlag(task, 'noexec', '1')
