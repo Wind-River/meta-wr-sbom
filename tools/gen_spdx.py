@@ -446,6 +446,14 @@ def get_yocto_version(bitbake_version):
     return bb_version_to_yocto_version[bb_ver[0]+'.'+bb_ver[1]]
 
 def generate_sbom(recipeDict):
+
+    def ltss_version_validate(ltss_version):
+        ltss_version_restrict = ['WRL.LTS.5.0.1', 'WRL.LTS.6.0', 'WRL.LTS.7.0', 'WRL.LTS.8.0', 'WRL.LTS.9.0', 'WRL.LTS.17', 'WRL.LTS.18']
+        if ltss_version in ltss_version_restrict:
+            return True
+        else:
+            return False
+
     doc = gen_SPDXPattern()
     doc.name = env_data["DISTRO_NAME"]
     if 'Wind River' in env_data["DISTRO_NAME"]:
@@ -454,6 +462,17 @@ def generate_sbom(recipeDict):
         doc.comment = "DISTRO: " + "Yocto-" + env_data["DISTRO_VERSION"]
     else:
         doc.comment = "DISTRO: " + "Yocto-" + get_yocto_version(env_data["BB_VERSION"])
+
+    if "PROJECT_LABELS" in env_data.keys():
+        doc.comment += "  PROJECT_LABELS: " + env_data["PROJECT_LABELS"]
+
+    if "LTSS_VERSION" in env_data.keys():
+        if ltss_version_validate(env_data["LTSS_VERSION"]):
+            doc.comment += "  LTSS_VERSION: " + env_data["LTSS_VERSION"]
+        else:
+            doc.comment += "  LTSS_VERSION: mismatch"
+            print("WARN: LTSS_VERSION value is not in the regular list.")
+
 
     for name in recipeDict.keys():
         if name.startswith("packagegroup-"):
@@ -543,6 +562,8 @@ def main():
         line.startswith("LICENSE_DIRECTORY=") or \
         line.startswith("TMPDIR=") or \
         line.startswith("IMAGE_ROOTFS=") or \
+        line.startswith("LTSS_VERSION=") or \
+        line.startswith("PROJECT_LABELS=") or \
         line.startswith("IMAGE_NAME="):
             line_data = line.split("=")
             env_data[line_data[0]] = line_data[1].strip().strip('"')

@@ -961,6 +961,13 @@ python image_combine_spdx() {
 
         return recipeDict
 
+    def ltss_version_validate(ltss_version):
+        ltss_version_restrict = ['WRL.LTS.5.0.1', 'WRL.LTS.6.0', 'WRL.LTS.7.0', 'WRL.LTS.8.0', 'WRL.LTS.9.0', 'WRL.LTS.17', 'WRL.LTS.18']
+        if ltss_version in ltss_version_restrict:
+            return True
+        else:
+            return False
+
 
     creation_time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     image_name = d.getVar("IMAGE_NAME", True)
@@ -1000,6 +1007,14 @@ python image_combine_spdx() {
     doc.comment += "  ARCH: " + d.getVar("MACHINE_ARCH", True)
     doc.comment += "  PROJECT_LABELS: " + str(d.getVar("PROJECT_LABELS", True))
     doc.comment += "  PROJECT_RELEASETIME: " + str(d.getVar("PROJECT_RELEASETIME", True))
+
+    ltss_version = d.getVar("LTSS_VERSION", True)
+    if ltss_version:
+        if ltss_version_validate(ltss_version):
+            doc.comment += "  LTSS_VERSION: " + str(d.getVar("LTSS_VERSION", True))
+        else:
+            doc.comment += "  LTSS_VERSION: mismatch"
+            bb.warn("LTSS_VERSION value is not in the regular list.")
     doc.documentDescribes.append("SPDXRef-Image-" + d.getVar("IMAGE_NAME", True))
 
     image = oe_sbom.spdx.SPDXPackage()
