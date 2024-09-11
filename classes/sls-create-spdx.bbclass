@@ -138,6 +138,8 @@ def convert_license_to_spdx(lic, document, d, existing={}):
         document.hasExtractedLicensingInfos.append(extracted_info)
 
     def convert(l):
+        from oe_sbom.spdx_license_map import spdx_license_map
+
         if l == "(" or l == ")":
             return l
 
@@ -150,7 +152,11 @@ def convert_license_to_spdx(lic, document, d, existing={}):
         if l == "CLOSED":
             return "NONE"
 
-        spdx_license = d.getVarFlag("SPDXLICENSEMAP", l, True) or l
+        if l in spdx_license_map.keys():
+            spdx_license = spdx_license_map[l]
+        else:
+            spdx_license = l
+
         if spdx_license in license_data["licenses"]:
             return spdx_license
 
