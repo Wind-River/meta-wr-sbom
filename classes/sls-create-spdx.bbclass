@@ -132,6 +132,8 @@ def convert_license_to_spdx(lic, document, d, existing={}):
         document.hasExtractedLicensingInfos.append(extracted_info)
 
     def convert(l):
+        from oe_sbom.spdx_license_map import spdx_license_map
+
         if l == "(" or l == ")":
             return l
 
@@ -144,7 +146,11 @@ def convert_license_to_spdx(lic, document, d, existing={}):
         if l == "CLOSED":
             return "NONE"
 
-        spdx_license = d.getVarFlag("SPDXLICENSEMAP", l) or l
+        if l in spdx_license_map.keys():
+            spdx_license = spdx_license_map[l]
+        else:
+            spdx_license = l
+
         if spdx_license in license_data["licenses"]:
             return spdx_license
 
@@ -511,10 +517,9 @@ python do_create_spdx() {
     if homepage:
         recipe.homepage = homepage
 
-    #license = d.getVar("LICENSE", True)
-    #if license:
-    #    recipe.licenseDeclared = convert_license_to_spdx(license, doc, d)
-    recipe.licenseDeclared = d.getVar("LICENSE", True)
+    license = d.getVar("LICENSE", True)
+    if license:
+        recipe.licenseDeclared = convert_license_to_spdx(license, doc, d)
 
     summary = d.getVar("SUMMARY", True)
     if summary:
@@ -608,8 +613,7 @@ python do_create_spdx() {
             spdx_package.SPDXID = oe_sbom.sbom.get_package_spdxid(pkg_name)
             spdx_package.name = pkg_name
             spdx_package.versionInfo = d.getVar("PV", True)
-            #spdx_package.licenseDeclared = convert_license_to_spdx(package_license, package_doc, d, found_licenses)
-            spdx_package.licenseDeclared = package_license
+            spdx_package.licenseDeclared = convert_license_to_spdx(package_license, package_doc, d, found_licenses)
 
             package_doc.packages.append(spdx_package)
 
