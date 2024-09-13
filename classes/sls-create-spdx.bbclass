@@ -87,7 +87,7 @@ def convert_license_to_spdx(lic, document, d, existing={}):
     from pathlib import Path
     import oe_sbom.spdx
 
-    available_licenses = d.getVar("AVAILABLE_LICENSES", True).split()
+    available_licenses = (d.getVar("AVAILABLE_LICENSES", True) or '').split()
     license_data = d.getVar("SPDX_LICENSE_DATA", True)
     extracted = {}
 
