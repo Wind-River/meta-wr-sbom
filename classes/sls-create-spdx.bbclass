@@ -120,7 +120,7 @@ def convert_license_to_spdx(lic, document, d, existing={}):
                 bb.warn("Cannot find text for license %s" % name)
         else:
             # If it's not SPDX, or PD, or in available licenses, then NO_GENERIC_LICENSE must be set
-            filename = d.getVarFlag('NO_GENERIC_LICENSE', name)
+            filename = d.getVarFlag('NO_GENERIC_LICENSE', name, True)
             if filename:
                 filename = d.expand("${S}/" + filename)
                 with open(filename, errors="replace") as f:
