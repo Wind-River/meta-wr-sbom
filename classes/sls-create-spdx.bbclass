@@ -495,10 +495,7 @@ python do_create_spdx() {
 
     recipe = oe_sbom.spdx.SPDXPackage()
     recipe.name = d.getVar("PN", True)
-    if d.getVar("SLS_EXTEND_VERSION", True):
-        recipe.versionInfo = d.getVar("PV", True) + "-" + d.getVar("SLS_EXTEND_VERSION", True)
-    else:
-        recipe.versionInfo = d.getVar("PV", True)
+    recipe.versionInfo = d.getVar("EXTENDPKGV", True)
     recipe.SPDXID = oe_sbom.sbom.get_recipe_spdxid(d)
     recipe.comment = " PackageGroup: " + get_packagegroup()
     if bb.data.inherits_class("native", d) or bb.data.inherits_class("cross", d):
@@ -1010,7 +1007,7 @@ python image_combine_spdx() {
 
     image = oe_sbom.spdx.SPDXPackage()
     image.name = d.getVar("PN", True)
-    image.versionInfo = d.getVar("PV", True)
+    image.versionInfo = d.getVar("EXTENDPKGV", True)
     image.SPDXID = oe_sbom.sbom.get_image_spdxid(image_name)
 
     doc.packages.append(image)
