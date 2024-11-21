@@ -29,6 +29,8 @@ def get_packaged_file_spdxid(pkg, idx):
 def get_image_spdxid(img):
     return "SPDXRef-Image-%s" % img
 
+def get_os_spdxid(img):
+    return "SPDXRef-OperatingSystem-%s" % img
 
 def write_doc(d, spdx_doc, subdir, spdx_deploy=None):
     from pathlib import Path

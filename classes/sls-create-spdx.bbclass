@@ -899,6 +899,165 @@ def spdx_get_src(d):
 do_rootfs[recrdeptask] += "do_create_spdx do_create_runtime_spdx"
 
 ROOTFS_POSTUNINSTALL_COMMAND =+ "image_combine_spdx ; "
+
+def get_yocto_codename(version):
+    from oe_sbom.yocto_versions import yocto_version_to_codename
+
+    for ver in yocto_version_to_codename.keys():
+        if len(ver) > len(version):
+            continue
+        if ver == version[:len(ver)]:
+            return yocto_version_to_codename[ver]
+
+def get_yocto_version(bitbake_version):
+    from oe_sbom.yocto_versions import bb_version_to_yocto_version
+
+    bb_ver = bitbake_version.split('.')
+    return bb_version_to_yocto_version[bb_ver[0]+'.'+bb_ver[1]]
+
+def make_image_link(imgdeploydir, image_link_name, target_path, suffix):
+    link = imgdeploydir / (image_link_name + suffix)
+    if link.exists():
+        os.remove(str(link))
+    link.symlink_to(os.path.relpath(str(target_path), str(link.parent)))
+
+def image_packages_spdx(d):
+    import os
+    import re
+    import oe_sbom.spdx
+    import oe_sbom.sbom
+    from oe.rootfs import image_list_installed_packages
+    from datetime import timezone, datetime
+    from pathlib import Path
+
+    def get_pkgdata(pkg_name):
+        import oe.packagedata
+
+        pkgdata_path = os.path.join(d.getVar('PKGDATA_DIR', True), 'runtime-reverse', pkg_name)
+        pkgdata = oe.packagedata.read_pkgdatafile(pkgdata_path)
+        return pkgdata
+
+    creation_time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    image_name = d.getVar("IMAGE_NAME", True)
+    image_link_name = d.getVar("IMAGE_LINK_NAME", True)
+
+    deploy_dir_spdx = Path(d.getVar("DEPLOY_DIR_SPDX", True))
+    imgdeploydir = Path(d.getVar("IMGDEPLOYDIR", True))
+    source_date_epoch = d.getVar("SOURCE_DATE_EPOCH", True)
+
+    doc = oe_sbom.spdx.SPDXDocument()
+    doc.name = image_name + "-built-packages"
+    doc.documentNamespace = get_doc_namespace(d, doc)
+    doc.creationInfo.created = creation_time
+    doc.creationInfo.comment = "This document was created by collecting packages built into image."
+    doc.creationInfo.licenseListVersion = d.getVar("SPDX_LICENSE_DATA", True)["licenseListVersion"]
+    doc.creationInfo.creators.append("Tool: meta-wr-sbom")
+    doc.creationInfo.creators.append("Organization: Wind River Systems, Inc.")
+    if 'Yocto' in d.getVar("DISTRO_NAME", True):
+        doc.comment = "DISTRO: " + "Yocto-" + get_yocto_codename(d.getVar("DISTRO_VERSION", True)) + "-" + d.getVar("DISTRO_VERSION", True)
+    elif 'Wind River' in d.getVar("DISTRO_NAME", True):
+        doc.comment = "DISTRO: " + "WRLinux-" + d.getVar("DISTRO_VERSION", True)
+    else:
+        wr_version = d.getVar("WRLINUX_VERSION", True)
+        if wr_version:
+            doc.comment = "DISTRO: " + "WRLinux-" + wr_version
+        else:
+            bb_version = d.getVar("BB_VERSION", True)
+            yocto_version = get_yocto_version(bb_version)
+            doc.comment = "DISTRO: " + "Yocto-" + get_yocto_codename(yocto_version) + "-" + yocto_version
+
+        D_name = d.getVar("DISTRO_NAME", True).strip().replace(" ", "_")
+        if D_name:
+            doc.comment += "  CUSTOMIZED_DISTRO: " + D_name + '-' + d.getVar("DISTRO_VERSION", True)
+        else:
+            doc.comment += "  CUSTOMIZED_DISTRO: Unknown-" + d.getVar("DISTRO_VERSION", True)
+    doc.comment += "  ARCH: " + d.getVar("MACHINE_ARCH", True)
+    doc.comment += "  PROJECT_LABELS: " + str(d.getVar("PROJECT_LABELS", True))
+    doc.comment += "  PROJECT_RELEASETIME: " + str(d.getVar("PROJECT_RELEASETIME", True))
+    doc.documentDescribes.append("SPDXRef-Image-" + d.getVar("IMAGE_NAME", True))
+
+    image = oe_sbom.spdx.SPDXPackage()
+    image.name = d.getVar("PN", True)
+    image.versionInfo = d.getVar("EXTENDPKGV", True)
+    image.SPDXID = oe_sbom.sbom.get_image_spdxid(image_name)
+
+    doc.packages.append(image)
+
+    os_package = oe_sbom.spdx.SPDXPackage()
+    os_package.name = d.getVar("DISTRO")
+    os_package.versionInfo = d.getVar("DISTRO_VERSION")
+    os_package.SPDXID = oe_sbom.sbom.get_os_spdxid(image_name)
+
+    doc.packages.append(os_package)
+
+    doc.add_relationship(image, "CONTAINS", "%s" % os_package.SPDXID)
+
+    spdx_package = oe_sbom.spdx.SPDXPackage()
+
+    packages = image_list_installed_packages(d)
+
+    for name in sorted(packages.keys()):
+        pkg_spdx_path = deploy_dir_spdx / "packages" / (name + ".spdx.json")
+        if not os.path.exists(str(pkg_spdx_path)):
+            continue
+        pkg_doc, pkg_doc_sha1 = oe_sbom.sbom.read_doc(pkg_spdx_path)
+
+        for p in pkg_doc.packages:
+            if p.name == name:
+                pkg_ref = oe_sbom.spdx.SPDXExternalDocumentRef()
+                pkg_ref.externalDocumentId = "DocumentRef-%s" % pkg_doc.name
+                pkg_ref.spdxDocument = pkg_doc.documentNamespace
+                pkg_ref.checksum.algorithm = "SHA1"
+                pkg_ref.checksum.checksumValue = pkg_doc_sha1
+
+                doc.externalDocumentRefs.append(pkg_ref)
+                doc.add_relationship("%s" % os_package.SPDXID, "CONTAINS", "%s" % p.SPDXID)
+
+                component_package = oe_sbom.spdx.SPDXPackage()
+                pkgdata = get_pkgdata(p.name)
+                component_package.name = p.name
+                component_package.SPDXID = p.SPDXID
+
+                if (not "PR" in pkgdata.keys()) or (not pkgdata["PR"]):
+                    component_package.versionInfo = pkgdata["PV"]
+                else:
+                    component_package.versionInfo = pkgdata["PV"] + "-" + pkgdata["PR"]
+
+                # Use downloadLocation from package spdx file, because downloadLocation
+                # from recipe spdx file may refers to local path
+                component_package.downloadLocation = p.downloadLocation
+                # Not use license from recipe spdx file because it combine multiple
+                # package licenses into one, it is wrong for package.
+                # Use license from package spdx file may bring "DocumentRef"
+                # into licenseDeclared and licenseConcluded, it violates the spdx
+                # standard, so remove "DocumentRef"
+                pattern = r'DocumentRef-recipe-.*\:'
+                component_package.licenseConcluded = re.sub(pattern, "", p.licenseConcluded)
+                component_package.licenseDeclared = re.sub(pattern, "", p.licenseDeclared)
+                component_package.copyrightText = p.copyrightText
+                component_package.supplier = p.supplier
+                component_package.sourceInfo = "built package from: " + pkgdata["PN"] + " " + component_package.versionInfo
+
+                purl = oe_sbom.spdx.SPDXExternalReference()
+                purl.referenceCategory = "PACKAGE-MANAGER"
+                purl.referenceType = "purl"
+                purl.referenceLocator = ("pkg:rpm/" + os_package.name + "/" +
+                    component_package.name + "@" + component_package.versionInfo +
+                    "?arch=" + d.getVar("MACHINE_ARCH") + "&distro=" + os_package.name + "-" + os_package.versionInfo)
+                component_package.externalRefs.append(purl)
+
+                doc.packages.append(component_package)
+                break
+            else:
+                bb.warn("Unable to find package with name '%s' in SPDX file %s" % (name, pkg_spdx_path))
+
+    image_spdx_path = imgdeploydir / (image_name + ".built-packages.spdx.json")
+
+    with image_spdx_path.open("wb") as f:
+        doc.to_json(f, sort_keys=True)
+
+    make_image_link(imgdeploydir, image_link_name, image_spdx_path, ".built-packages.spdx.json")
+
 python image_combine_spdx() {
     import os
     import oe_sbom.spdx
@@ -909,22 +1068,6 @@ python image_combine_spdx() {
     from datetime import timezone, datetime
     from pathlib import Path
     import tarfile
-
-    def get_yocto_codename(version):
-        from oe_sbom.yocto_versions import yocto_version_to_codename
-
-        for ver in yocto_version_to_codename.keys():
-            if len(ver) > len(version):
-                continue
-            if ver == version[:len(ver)]:
-                return yocto_version_to_codename[ver]
-
-    def get_yocto_version(bitbake_version):
-        from oe_sbom.yocto_versions import bb_version_to_yocto_version
-
-        bb_ver = bitbake_version.split('.')
-        return bb_version_to_yocto_version[bb_ver[0]+'.'+bb_ver[1]]
-
 
     def getInstalledPkgs(packages):
         import oe.packagedata
@@ -1082,13 +1225,7 @@ python image_combine_spdx() {
     with image_spdx_path.open("wb") as f:
         doc.to_json(f, sort_keys=True)
 
-    def make_image_link(target_path, suffix):
-        link = imgdeploydir / (image_link_name + suffix)
-        if link.exists():
-            os.remove(str(link))
-        link.symlink_to(os.path.relpath(str(target_path), str(link.parent)))
-
-    make_image_link(image_spdx_path, ".spdx.json")
+    make_image_link(imgdeploydir, image_link_name, image_spdx_path, ".spdx.json")
 
     num_threads = int(d.getVar("BB_NUMBER_THREADS", True))
 
@@ -1161,12 +1298,14 @@ python image_combine_spdx() {
 
         tar.addfile(info, fileobj=index_str)
 
-    make_image_link(spdx_tar_path, ".spdx.tar.xz")
+    make_image_link(imgdeploydir, image_link_name, spdx_tar_path, ".spdx.tar.xz")
 
     spdx_index_path = imgdeploydir / (image_name + ".spdx.index.json")
     with spdx_index_path.open("w") as f:
         json.dump(index, f, indent=2, sort_keys=True)
 
-    make_image_link(spdx_index_path, ".spdx.index.json")
+    make_image_link(imgdeploydir, image_link_name, spdx_index_path, ".spdx.index.json")
+
+    image_packages_spdx(d)
 }
 
