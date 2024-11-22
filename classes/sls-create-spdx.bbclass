@@ -1007,6 +1007,11 @@ def image_packages_spdx(d):
     packages = image_list_installed_packages(d)
 
     for name in sorted(packages.keys()):
+        # skip package when its name start "kernel-", because it is
+        # part of "kernel" package
+        if name.startswith("kernel-"):
+            continue
+
         pkg_spdx_path = deploy_dir_spdx / "packages" / (name + ".spdx.json")
         if not os.path.exists(str(pkg_spdx_path)):
             continue
