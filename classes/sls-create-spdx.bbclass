@@ -918,6 +918,12 @@ def make_image_link(imgdeploydir, image_link_name, target_path, suffix):
         os.remove(str(link))
     link.symlink_to(os.path.relpath(str(target_path), str(link.parent)))
 
+def replace_recipe_name(recipe_name, substitutes):
+    if recipe_name in substitutes.keys():
+        return substitutes[recipe_name]
+    else:
+        return recipe_name
+
 python image_packages_spdx() {
     import os
     import re
@@ -926,6 +932,10 @@ python image_packages_spdx() {
     from oe.rootfs import image_list_installed_packages
     from datetime import timezone, datetime
     from pathlib import Path
+
+    recipe_substitutes = {}
+    # replace it because CVE datasource use another package name
+    recipe_substitutes["linux-yocto"] = "linux"
 
     def get_pkgdata(pkg_name):
         import oe.packagedata
@@ -1048,7 +1058,8 @@ python image_packages_spdx() {
                 component_package.licenseDeclared = re.sub(pattern, "", p.licenseDeclared)
                 component_package.copyrightText = p.copyrightText
                 component_package.supplier = p.supplier
-                component_package.sourceInfo = "built package from: " + pkgdata["PN"] + " " + component_package.versionInfo
+                source_name = replace_recipe_name(pkgdata["PN"], recipe_substitutes)
+                component_package.sourceInfo = "built package from: " + source_name + " " + component_package.versionInfo
 
                 purl = oe_sbom.spdx.SPDXExternalReference()
                 purl.referenceCategory = "PACKAGE-MANAGER"
