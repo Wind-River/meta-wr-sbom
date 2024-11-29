@@ -1087,7 +1087,7 @@ python image_packages_spdx() {
 
                 if pkgdata["PN"] not in recipes.keys():
                     recipes[pkgdata["PN"]] = []
-                recipes[pkgdata["PN"]].append(p.name)
+                recipes[pkgdata["PN"]].append(p.SPDXID)
 
                 purl = oe_sbom.spdx.SPDXExternalReference()
                 purl.referenceCategory = "PACKAGE-MANAGER"
@@ -1102,16 +1102,24 @@ python image_packages_spdx() {
             else:
                 bb.warn("Unable to find package with name '%s' in SPDX file %s" % (name, pkg_spdx_path))
 
-    # append other licensing information detected section
     for name in recipes.keys():
         recipe_spdx_path = deploy_dir_spdx / "recipes" / ("recipe-" + name + ".spdx.json")
         if os.path.exists(str(recipe_spdx_path)):
             recipe_doc, recipe_doc_sha1 = oe_sbom.sbom.read_doc(recipe_spdx_path)
+            # append other licensing information detected section
             for licensingInfo in recipe_doc.hasExtractedLicensingInfos:
                 if (licensingInfo.licenseId in user_defined_licenses.keys() and
                     licensingInfo.licenseId not in user_defined_licenses_extracted.keys()):
                     doc.hasExtractedLicensingInfos.append(licensingInfo)
                     user_defined_licenses_extracted[licensingInfo.licenseId] = {}
+
+            # append CPEs
+            for package_r in recipe_doc.packages:
+                for externalRef in package_r.externalRefs:
+                    if externalRef.referenceCategory == "SECURITY":
+                        for package in doc.packages:
+                            if package.SPDXID in recipes[name]:
+                                package.externalRefs.append(externalRef)
 
     image_spdx_path = imgdeploydir / (image_name + ".spdx.json")
 
