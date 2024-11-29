@@ -933,6 +933,7 @@ python image_packages_spdx() {
     from datetime import timezone, datetime
     from pathlib import Path
 
+
     recipe_substitutes = {}
     # replace it because CVE datasource use another package name
     recipe_substitutes["linux-yocto"] = "linux"
@@ -950,6 +951,12 @@ python image_packages_spdx() {
             return True
         else:
             return False
+
+    def collect_lics(pattern, lic_string, results):
+        lic_ids = re.findall(pattern, lic_string)
+        for lic_id in lic_ids:
+            if lic_id not in results.keys():
+                results[lic_id] = {}
 
     creation_time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     image_name = d.getVar("IMAGE_NAME", True)
@@ -1017,6 +1024,11 @@ python image_packages_spdx() {
     spdx_package = oe_sbom.spdx.SPDXPackage()
 
     packages = image_list_installed_packages(d)
+    recipes = {}
+    user_defined_licenses = {}
+    user_defined_licenses_extracted = {}
+    pattern_docref_recipe = r'DocumentRef-recipe-.*\:'
+    pattern_licref = r'LicenseRef-[a-zA-Z0-9.-]+'
 
     for name in sorted(packages.keys()):
         # skip package when its name start "kernel-", because it is
@@ -1058,13 +1070,18 @@ python image_packages_spdx() {
                 # Use license from package spdx file may bring "DocumentRef"
                 # into licenseDeclared and licenseConcluded, it violates the spdx
                 # standard, so remove "DocumentRef"
-                pattern = r'DocumentRef-recipe-.*\:'
-                component_package.licenseConcluded = re.sub(pattern, "", p.licenseConcluded)
-                component_package.licenseDeclared = re.sub(pattern, "", p.licenseDeclared)
+                component_package.licenseConcluded = re.sub(pattern_docref_recipe, "", p.licenseConcluded)
+                collect_lics(pattern_licref, component_package.licenseConcluded, user_defined_licenses)
+                component_package.licenseDeclared = re.sub(pattern_docref_recipe, "", p.licenseDeclared)
+                collect_lics(pattern_licref, component_package.licenseDeclared, user_defined_licenses)
                 component_package.copyrightText = p.copyrightText
                 component_package.supplier = p.supplier
                 source_name = replace_recipe_name(pkgdata["PN"], recipe_substitutes)
                 component_package.sourceInfo = "built package from: " + source_name + " " + component_package.versionInfo
+
+                if pkgdata["PN"] not in recipes.keys():
+                    recipes[pkgdata["PN"]] = []
+                recipes[pkgdata["PN"]].append(p.name)
 
                 purl = oe_sbom.spdx.SPDXExternalReference()
                 purl.referenceCategory = "PACKAGE-MANAGER"
@@ -1078,6 +1095,17 @@ python image_packages_spdx() {
                 break
             else:
                 bb.warn("Unable to find package with name '%s' in SPDX file %s" % (name, pkg_spdx_path))
+
+    # append other licensing information detected section
+    for name in recipes.keys():
+        recipe_spdx_path = deploy_dir_spdx / "recipes" / ("recipe-" + name + ".spdx.json")
+        if os.path.exists(str(recipe_spdx_path)):
+            recipe_doc, recipe_doc_sha1 = oe_sbom.sbom.read_doc(recipe_spdx_path)
+            for licensingInfo in recipe_doc.hasExtractedLicensingInfos:
+                if (licensingInfo.licenseId in user_defined_licenses.keys() and
+                    licensingInfo.licenseId not in user_defined_licenses_extracted.keys()):
+                    doc.hasExtractedLicensingInfos.append(licensingInfo)
+                    user_defined_licenses_extracted[licensingInfo.licenseId] = {}
 
     image_spdx_path = imgdeploydir / (image_name + ".spdx.json")
 
