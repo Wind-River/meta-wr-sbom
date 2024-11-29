@@ -100,7 +100,7 @@ def convert_license_to_spdx(lic, document, d, existing={}):
         extracted_info = oe_sbom.spdx.SPDXExtractedLicensingInfo()
         extracted_info.name = name
         extracted_info.licenseId = ident
-        extracted_info.extractedText = None
+        extracted_info.extractedText = "None"
 
         if name == "PD":
             # Special-case this.
@@ -114,7 +114,7 @@ def convert_license_to_spdx(lic, document, d, existing={}):
                         break
                 except FileNotFoundError:
                     pass
-            if extracted_info.extractedText is None:
+            if extracted_info.extractedText == "None":
                 # Error out, as the license was in available_licenses so should
                 # be on disk somewhere.
                 bb.warn("Cannot find text for license %s" % name)
