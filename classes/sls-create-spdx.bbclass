@@ -83,6 +83,12 @@ python() {
 # json.load() may not load ${SPDX_LICENSES} *deterministically*, so ignoring its value when calculating signature for SPDX_LICENSE_DATA.
 SPDX_LICENSE_DATA[vardepvalue] = ""
 
+# idstring shall only contain letters, numbers, . and/or -.
+# replace other character with "-"
+def clean_idstring(id):
+    import re
+    return re.sub(r'[^a-zA-Z0-9.-]', '-', id)
+
 def convert_license_to_spdx(lic, document, d, existing={}):
     from pathlib import Path
     import oe_sbom.spdx
@@ -99,7 +105,7 @@ def convert_license_to_spdx(lic, document, d, existing={}):
 
         extracted_info = oe_sbom.spdx.SPDXExtractedLicensingInfo()
         extracted_info.name = name
-        extracted_info.licenseId = ident
+        extracted_info.licenseId = clean_idstring(ident)
         extracted_info.extractedText = "None"
 
         if name == "PD":
