@@ -930,6 +930,18 @@ def replace_recipe_name(recipe_name, substitutes):
     else:
         return recipe_name
 
+def is_CPE_on(d):
+    return d.getVar('SBOM_CPE')
+
+def is_PURL_on(d):
+    return d.getVar('SBOM_PURL')
+
+def is_license_on(d):
+    return d.getVar('SBOM_license')
+
+def is_externalDocumentRefs_on(d):
+    return d.getVar('SBOM_externalDocumentRefs')
+
 python image_packages_spdx() {
     import os
     import re
@@ -938,7 +950,6 @@ python image_packages_spdx() {
     from oe.rootfs import image_list_installed_packages
     from datetime import timezone, datetime
     from pathlib import Path
-
 
     recipe_substitutes = {}
     # replace it because CVE datasource use another package name
@@ -1055,7 +1066,9 @@ python image_packages_spdx() {
                 pkg_ref.checksum.algorithm = "SHA1"
                 pkg_ref.checksum.checksumValue = pkg_doc_sha1
 
-                doc.externalDocumentRefs.append(pkg_ref)
+                if is_externalDocumentRefs_on(d):
+                    doc.externalDocumentRefs.append(pkg_ref)
+
                 doc.add_relationship("%s" % os_package.SPDXID, "CONTAINS", "%s" % p.SPDXID)
 
                 component_package = oe_sbom.spdx.SPDXPackage()
@@ -1071,15 +1084,18 @@ python image_packages_spdx() {
                 # Use downloadLocation from package spdx file, because downloadLocation
                 # from recipe spdx file may refers to local path
                 component_package.downloadLocation = p.downloadLocation
-                # Not use license from recipe spdx file because it combine multiple
-                # package licenses into one, it is wrong for package.
-                # Use license from package spdx file may bring "DocumentRef"
-                # into licenseDeclared and licenseConcluded, it violates the spdx
-                # standard, so remove "DocumentRef"
-                component_package.licenseConcluded = re.sub(pattern_docref_recipe, "", p.licenseConcluded)
-                collect_lics(pattern_licref, component_package.licenseConcluded, user_defined_licenses)
-                component_package.licenseDeclared = re.sub(pattern_docref_recipe, "", p.licenseDeclared)
-                collect_lics(pattern_licref, component_package.licenseDeclared, user_defined_licenses)
+
+                if is_license_on(d):
+                    # Not use license from recipe spdx file because it combine multiple
+                    # package licenses into one, it is wrong for package.
+                    # Use license from package spdx file may bring "DocumentRef"
+                    # into licenseDeclared and licenseConcluded, it violates the spdx
+                    # standard, so remove "DocumentRef"
+                    component_package.licenseConcluded = re.sub(pattern_docref_recipe, "", p.licenseConcluded)
+                    collect_lics(pattern_licref, component_package.licenseConcluded, user_defined_licenses)
+                    component_package.licenseDeclared = re.sub(pattern_docref_recipe, "", p.licenseDeclared)
+                    collect_lics(pattern_licref, component_package.licenseDeclared, user_defined_licenses)
+
                 component_package.copyrightText = p.copyrightText
                 component_package.supplier = p.supplier
                 source_name = replace_recipe_name(pkgdata["PN"], recipe_substitutes)
@@ -1089,37 +1105,41 @@ python image_packages_spdx() {
                     recipes[pkgdata["PN"]] = []
                 recipes[pkgdata["PN"]].append(p.SPDXID)
 
-                purl = oe_sbom.spdx.SPDXExternalReference()
-                purl.referenceCategory = "PACKAGE-MANAGER"
-                purl.referenceType = "purl"
-                purl.referenceLocator = ("pkg:rpm/" + os_package.name + "/" +
-                    component_package.name + "@" + component_package.versionInfo +
-                    "?arch=" + d.getVar("MACHINE_ARCH") + "&distro=" + os_package.name + "-" + os_package.versionInfo)
-                component_package.externalRefs.append(purl)
+                if is_PURL_on(d):
+                    purl = oe_sbom.spdx.SPDXExternalReference()
+                    purl.referenceCategory = "PACKAGE-MANAGER"
+                    purl.referenceType = "purl"
+                    purl.referenceLocator = ("pkg:rpm/" + os_package.name + "/" +
+                        component_package.name + "@" + component_package.versionInfo +
+                        "?arch=" + d.getVar("MACHINE_ARCH") + "&distro=" + os_package.name + "-" + os_package.versionInfo)
+                    component_package.externalRefs.append(purl)
 
                 doc.packages.append(component_package)
                 break
             else:
                 bb.warn("Unable to find package with name '%s' in SPDX file %s" % (name, pkg_spdx_path))
 
-    for name in recipes.keys():
-        recipe_spdx_path = deploy_dir_spdx / "recipes" / ("recipe-" + name + ".spdx.json")
-        if os.path.exists(str(recipe_spdx_path)):
-            recipe_doc, recipe_doc_sha1 = oe_sbom.sbom.read_doc(recipe_spdx_path)
-            # append other licensing information detected section
-            for licensingInfo in recipe_doc.hasExtractedLicensingInfos:
-                if (licensingInfo.licenseId in user_defined_licenses.keys() and
-                    licensingInfo.licenseId not in user_defined_licenses_extracted.keys()):
-                    doc.hasExtractedLicensingInfos.append(licensingInfo)
-                    user_defined_licenses_extracted[licensingInfo.licenseId] = {}
+    if is_license_on(d) or is_CPE_on(d):
+        for name in recipes.keys():
+            recipe_spdx_path = deploy_dir_spdx / "recipes" / ("recipe-" + name + ".spdx.json")
+            if os.path.exists(str(recipe_spdx_path)):
+                recipe_doc, recipe_doc_sha1 = oe_sbom.sbom.read_doc(recipe_spdx_path)
+                if is_license_on(d):
+                    # append other licensing information detected section
+                    for licensingInfo in recipe_doc.hasExtractedLicensingInfos:
+                        if (licensingInfo.licenseId in user_defined_licenses.keys() and
+                            licensingInfo.licenseId not in user_defined_licenses_extracted.keys()):
+                            doc.hasExtractedLicensingInfos.append(licensingInfo)
+                            user_defined_licenses_extracted[licensingInfo.licenseId] = {}
 
-            # append CPEs
-            for package_r in recipe_doc.packages:
-                for externalRef in package_r.externalRefs:
-                    if externalRef.referenceCategory == "SECURITY":
-                        for package in doc.packages:
-                            if package.SPDXID in recipes[name]:
-                                package.externalRefs.append(externalRef)
+                if is_CPE_on(d):
+                    # append CPEs
+                    for package_r in recipe_doc.packages:
+                        for externalRef in package_r.externalRefs:
+                            if externalRef.referenceCategory == "SECURITY":
+                                for package in doc.packages:
+                                    if package.SPDXID in recipes[name]:
+                                        package.externalRefs.append(externalRef)
 
     image_spdx_path = imgdeploydir / (image_name + ".spdx.json")
 
