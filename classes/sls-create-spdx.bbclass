@@ -924,11 +924,11 @@ def make_image_link(imgdeploydir, image_link_name, target_path, suffix):
         os.remove(str(link))
     link.symlink_to(os.path.relpath(str(target_path), str(link.parent)))
 
-def replace_recipe_name(recipe_name, substitutes):
-    if recipe_name in substitutes.keys():
-        return substitutes[recipe_name]
+def replace_name(name, substitutes):
+    if name in substitutes.keys():
+        return substitutes[name]
     else:
-        return recipe_name
+        return name
 
 def is_CPE_on(d):
     return d.getVar('SBOM_CPE')
@@ -954,6 +954,10 @@ python image_packages_spdx() {
     recipe_substitutes = {}
     # replace it because CVE datasource use another package name
     recipe_substitutes["linux-yocto"] = "linux"
+
+    distro_substitues = {}
+    for distro in (d.getVar('SBOM_WRLINUX_DISTROS') or "").split():
+        distro_substitues[distro] = "wrlinux"
 
     def get_pkgdata(pkg_name):
         import oe.packagedata
@@ -1030,7 +1034,7 @@ python image_packages_spdx() {
     doc.packages.append(image)
 
     os_package = oe_sbom.spdx.SPDXPackage()
-    os_package.name = d.getVar("DISTRO")
+    os_package.name = replace_name(d.getVar("DISTRO"), distro_substitues)
     os_package.versionInfo = d.getVar("DISTRO_VERSION")
     os_package.SPDXID = oe_sbom.sbom.get_os_spdxid(image_name)
 
@@ -1098,7 +1102,7 @@ python image_packages_spdx() {
 
                 component_package.copyrightText = p.copyrightText
                 component_package.supplier = p.supplier
-                source_name = replace_recipe_name(pkgdata["PN"], recipe_substitutes)
+                source_name = replace_name(pkgdata["PN"], recipe_substitutes)
                 component_package.sourceInfo = "built package from: " + source_name + " " + component_package.versionInfo
 
                 if pkgdata["PN"] not in recipes.keys():
@@ -1111,7 +1115,7 @@ python image_packages_spdx() {
                     purl.referenceType = "purl"
                     purl.referenceLocator = ("pkg:rpm/" + os_package.name + "/" +
                         component_package.name + "@" + component_package.versionInfo +
-                        "?arch=" + d.getVar("MACHINE_ARCH") + "&distro=" + os_package.name + "-" + os_package.versionInfo)
+                        "?arch=" + d.getVar("MACHINE_ARCH") + "&distro=" + d.getVar("DISTRO") + "-" + os_package.versionInfo)
                     component_package.externalRefs.append(purl)
 
                 doc.packages.append(component_package)
