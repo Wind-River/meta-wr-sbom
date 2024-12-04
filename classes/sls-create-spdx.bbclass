@@ -895,66 +895,44 @@ def spdx_get_src(d):
 
 do_rootfs[recrdeptask] += "do_create_spdx do_create_runtime_spdx"
 
-ROOTFS_POSTUNINSTALL_COMMAND =+ "image_combine_spdx ; "
-python image_combine_spdx() {
+ROOTFS_POSTUNINSTALL_COMMAND =+ "image_packages_spdx ; "
+
+def get_yocto_codename(version):
+    yocto_version_to_codename = {"4.1": "Langdale", "4.0": "Kirkstone", "3.4": "Honister", "3.3": "Hardknott", "3.2": "Gatesgarth", "3.1": "Dunfell", "3.0": "Zeus", "2.7": "Warrior", "2.6": "Thud", "2.5": "Sumo", "2.4": "Rocko", "2.3": "Pyro", "2.2": "Morty", "2.1": "Krogoth", "2.0": "Jethro", "1.8": "Fido", "1.7": "Dizzy", "1.6": "Daisy", "1.5": "Dora", "1.4": "Dylan", "1.3": "Danny", "1.2": "Denzil", "1.1": "Edison", "1.0": "Bernard", "0.9": "Laverne"}
+
+    for ver in yocto_version_to_codename.keys():
+        if len(ver) > len(version):
+            continue
+        if ver == version[:len(ver)]:
+            return yocto_version_to_codename[ver]
+
+def get_yocto_version(bitbake_version):
+    bb_version_to_yocto_version = {"2.2": "4.1", "2.0": "4.0", "1.52": "3.4", "1.50": "3.3", "1.48": "3.2", "1.46": "3.1", "1.44": "3.0", "1.42": "2.7", "1.40": "2.6", "1.38": "2.5", "1.36": "2.4", "1.34": "2.3", "1.32": "2.2", "1.30": "2.1", "1.28": "2.0", "1.26": "1.8", "1.24": "1.7", "1.22": "1.6", "1.20": "1.5", "1.18": "1.4", "1.18": "1.4", "1.16": "1.3"}
+
+    bb_ver = bitbake_version.split('.')
+    return bb_version_to_yocto_version[bb_ver[0]+'.'+bb_ver[1]]
+
+def make_image_link(imgdeploydir, image_link_name, target_path, suffix):
+    link = imgdeploydir / (image_link_name + suffix)
+    if link.exists():
+        os.remove(str(link))
+    link.symlink_to(os.path.relpath(str(target_path), str(link.parent)))
+
+python image_packages_spdx() {
     import os
+    import re
     import oe_sbom.spdx
     import oe_sbom.sbom
-    import io
-    import json
     from oe.rootfs import image_list_installed_packages
     from datetime import timezone, datetime
     from pathlib import Path
-    import tarfile
 
-    def get_yocto_codename(version):
-        yocto_version_to_codename = {"4.1": "Langdale", "4.0": "Kirkstone", "3.4": "Honister", "3.3": "Hardknott", "3.2": "Gatesgarth", "3.1": "Dunfell", "3.0": "Zeus", "2.7": "Warrior", "2.6": "Thud", "2.5": "Sumo", "2.4": "Rocko", "2.3": "Pyro", "2.2": "Morty", "2.1": "Krogoth", "2.0": "Jethro", "1.8": "Fido", "1.7": "Dizzy", "1.6": "Daisy", "1.5": "Dora", "1.4": "Dylan", "1.3": "Danny", "1.2": "Denzil", "1.1": "Edison", "1.0": "Bernard", "0.9": "Laverne"}
-        for ver in yocto_version_to_codename.keys():
-            if len(ver) > len(version):
-                continue
-            if ver == version[:len(ver)]:
-                return yocto_version_to_codename[ver]
-
-    def get_yocto_version(bitbake_version):
-        bb_version_to_yocto_version = {"2.2": "4.1", "2.0": "4.0", "1.52": "3.4", "1.50": "3.3", "1.48": "3.2", "1.46": "3.1", "1.44": "3.0", "1.42": "2.7", "1.40": "2.6", "1.38": "2.5", "1.36": "2.4", "1.34": "2.3", "1.32": "2.2", "1.30": "2.1", "1.28": "2.0", "1.26": "1.8", "1.24": "1.7", "1.22": "1.6", "1.20": "1.5", "1.18": "1.4", "1.18": "1.4", "1.16": "1.3"}
-        bb_ver = bitbake_version.split('.')
-        return bb_version_to_yocto_version[bb_ver[0]+'.'+bb_ver[1]]
-
-
-    def getInstalledPkgs(packages):
+    def get_pkgdata(pkg_name):
         import oe.packagedata
 
-        pkg_dic = {}
-        recipeDict = {}
-        for pkg in sorted(packages):
-            pkg_info = os.path.join(d.getVar('PKGDATA_DIR', True), 'runtime-reverse', pkg)
-            pkg_name = os.path.basename(os.readlink(pkg_info))
-
-            pkg_dic[pkg_name] = oe.packagedata.read_pkgdatafile(pkg_info)
-            if not "LICENSE" in pkg_dic[pkg_name].keys():
-                pkg_lic_name = "LICENSE_" + pkg_name
-                if pkg_lic_name not in pkg_dic[pkg_name].keys():
-                    pkg_lic_name = "LICENSE:" + pkg_name
-                pkg_dic[pkg_name]["LICENSE"] = pkg_dic[pkg_name][pkg_lic_name]
-
-        for package_name in pkg_dic.keys():
-            package_version = pkg_dic[package_name]["PV"]
-            recipe_name = pkg_dic[package_name]["PN"]
-            declared_license = pkg_dic[package_name]["LICENSE"]
-
-            pkgInfo = dict()
-            if recipe_name not in recipeDict.keys():
-                recipeDict[recipe_name] = {}
-            if package_version not in recipeDict[recipe_name].keys():
-                recipeDict[recipe_name][package_version] = []
-
-            pkgInfo["name"] = package_name
-            pkgInfo["versionInfo"] = package_version
-            pkgInfo["recipe"] = recipe_name
-            pkgInfo["licenseDeclared"] = declared_license
-            recipeDict[recipe_name][package_version].append(pkgInfo)
-
-        return recipeDict
+        pkgdata_path = os.path.join(d.getVar('PKGDATA_DIR', True), 'runtime-reverse', pkg_name)
+        pkgdata = oe.packagedata.read_pkgdatafile(pkgdata_path)
+        return pkgdata
 
     def ltss_version_validate(ltss_version):
         ltss_version_restrict = ['WRL.LTS.5.0.1', 'WRL.LTS.6.0', 'WRL.LTS.7.0', 'WRL.LTS.8.0', 'WRL.LTS.9.0', 'WRL.LTS.17', 'WRL.LTS.18', 'WRL.LTS.19']
@@ -962,7 +940,6 @@ python image_combine_spdx() {
             return True
         else:
             return False
-
 
     creation_time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     image_name = d.getVar("IMAGE_NAME", True)
@@ -976,7 +953,7 @@ python image_combine_spdx() {
     doc.name = image_name
     doc.documentNamespace = get_doc_namespace(d, doc)
     doc.creationInfo.created = creation_time
-    doc.creationInfo.comment = "This document was created by analyzing the source of the Yocto recipe during the build."
+    doc.creationInfo.comment = "This document was created by collecting packages built into image."
     doc.creationInfo.licenseListVersion = d.getVar("SPDX_LICENSE_DATA", True)["licenseListVersion"]
     doc.creationInfo.creators.append("Tool: meta-wr-sbom")
     doc.creationInfo.creators.append("Organization: Wind River Systems, Inc.")
@@ -1013,10 +990,19 @@ python image_combine_spdx() {
 
     image = oe_sbom.spdx.SPDXPackage()
     image.name = d.getVar("PN", True)
-    image.versionInfo = d.getVar("PV", True)
+    image.versionInfo = d.getVar("EXTENDPKGV", True)
     image.SPDXID = oe_sbom.sbom.get_image_spdxid(image_name)
 
     doc.packages.append(image)
+
+    os_package = oe_sbom.spdx.SPDXPackage()
+    os_package.name = d.getVar("DISTRO")
+    os_package.versionInfo = d.getVar("DISTRO_VERSION")
+    os_package.SPDXID = oe_sbom.sbom.get_os_spdxid(image_name)
+
+    doc.packages.append(os_package)
+
+    doc.add_relationship(image, "CONTAINS", "%s" % os_package.SPDXID)
 
     spdx_package = oe_sbom.spdx.SPDXPackage()
 
@@ -1037,146 +1023,50 @@ python image_combine_spdx() {
                 pkg_ref.checksum.checksumValue = pkg_doc_sha1
 
                 doc.externalDocumentRefs.append(pkg_ref)
-                doc.add_relationship(image, "CONTAINS", "%s:%s" % (pkg_ref.externalDocumentId, p.SPDXID))
+                doc.add_relationship("%s" % os_package.SPDXID, "CONTAINS", "%s" % p.SPDXID)
+
+                component_package = oe_sbom.spdx.SPDXPackage()
+                pkgdata = get_pkgdata(p.name)
+                component_package.name = p.name
+                component_package.SPDXID = p.SPDXID
+
+                if (not "PR" in pkgdata.keys()) or (not pkgdata["PR"]):
+                    component_package.versionInfo = pkgdata["PV"]
+                else:
+                    component_package.versionInfo = pkgdata["PV"] + "-" + pkgdata["PR"]
+
+                # Use downloadLocation from package spdx file, because downloadLocation
+                # from recipe spdx file may refers to local path
+                component_package.downloadLocation = p.downloadLocation
+                # Not use license from recipe spdx file because it combine multiple
+                # package licenses into one, it is wrong for package.
+                # Use license from package spdx file may bring "DocumentRef"
+                # into licenseDeclared and licenseConcluded, it violates the spdx
+                # standard, so remove "DocumentRef"
+                pattern = r'DocumentRef-recipe-.*\:'
+                component_package.licenseConcluded = re.sub(pattern, "", p.licenseConcluded)
+                component_package.licenseDeclared = re.sub(pattern, "", p.licenseDeclared)
+                component_package.copyrightText = p.copyrightText
+                component_package.supplier = p.supplier
+                component_package.sourceInfo = "built package from: " + pkgdata["PN"] + " " + component_package.versionInfo
+
+                purl = oe_sbom.spdx.SPDXExternalReference()
+                purl.referenceCategory = "PACKAGE-MANAGER"
+                purl.referenceType = "purl"
+                purl.referenceLocator = ("pkg:rpm/" + os_package.name + "/" +
+                    component_package.name + "@" + component_package.versionInfo +
+                    "?arch=" + d.getVar("MACHINE_ARCH") + "&distro=" + os_package.name + "-" + os_package.versionInfo)
+                component_package.externalRefs.append(purl)
+
+                doc.packages.append(component_package)
                 break
-        else:
-            bb.warn("Unable to find package with name '%s' in SPDX file %s" % (name, pkg_spdx_path))
+            else:
+                bb.warn("Unable to find package with name '%s' in SPDX file %s" % (name, pkg_spdx_path))
 
-        for r in pkg_doc.relationships:
-            if r.relationshipType == "GENERATED_FROM":
-                 doc.relationships.append(r)
-                 break
-        else:
-             bb.warn("Unable to find GENERATED_FROM relationship in SPDX file %s" %  pkg_spdx_path)
-
-        runtime_spdx_path = deploy_dir_spdx / "runtime" / ("runtime-" + name + ".spdx.json")
-        runtime_doc, runtime_doc_sha1 = oe_sbom.sbom.read_doc(runtime_spdx_path)
-
-        runtime_ref = oe_sbom.spdx.SPDXExternalDocumentRef()
-        runtime_ref.externalDocumentId = "DocumentRef-%s" % runtime_doc.name
-        runtime_ref.spdxDocument = runtime_doc.documentNamespace
-        runtime_ref.checksum.algorithm = "SHA1"
-        runtime_ref.checksum.checksumValue = runtime_doc_sha1
-
-        # "OTHER" isn't ideal here, but I can't find a relationship that makes sense
-        doc.externalDocumentRefs.append(runtime_ref)
-        doc.add_relationship(
-            image,
-            "OTHER",
-            "%s:%s" % (runtime_ref.externalDocumentId, runtime_doc.SPDXID),
-            comment="Runtime dependencies for %s" % name
-        )
-
-    recipe_spdx_path = os.path.join(str(deploy_dir_spdx), "recipes")
-
-    pkgsInfo = getInstalledPkgs(packages)
-
-    for name in pkgsInfo.keys():
-        if name.startswith("packagegroup-"):
-            continue
-
-        filename = os.path.join(recipe_spdx_path, "recipe-%s.spdx.json" % name)
-        if os.path.exists(filename):
-            with open(filename) as f:
-                recipe_spdx = json.load(f)
-                if 'packages' in recipe_spdx.keys():
-                    doc.packages.extend(recipe_spdx["packages"])
-                #if 'files' in recipe_spdx.keys():
-                #    doc.files.extend(recipe_spdx["files"])
-                #if 'relationships' in recipe_spdx.keys():
-                #    doc.relationships.extend(recipe_spdx["relationships"])
-        else:
-            bb.warn("Found no recipe spdx file: %s" % filename)
     image_spdx_path = imgdeploydir / (image_name + ".spdx.json")
 
     with image_spdx_path.open("wb") as f:
         doc.to_json(f, sort_keys=True)
 
-    def make_image_link(target_path, suffix):
-        link = imgdeploydir / (image_link_name + suffix)
-        if link.exists():
-            os.remove(str(link))
-        link.symlink_to(os.path.relpath(str(target_path), str(link.parent)))
-
-    make_image_link(image_spdx_path, ".spdx.json")
-
-    num_threads = int(d.getVar("BB_NUMBER_THREADS", True))
-
-    visited_docs = set()
-
-    index = {"documents": []}
-
-    spdx_tar_path = imgdeploydir / (image_name + ".spdx.tar.xz")
-    with tarfile.open(name=str(spdx_tar_path), mode="w:xz") as tar:
-        def collect_spdx_document(path):
-            nonlocal tar
-            nonlocal deploy_dir_spdx
-            nonlocal source_date_epoch
-            nonlocal index
-
-            if path in visited_docs:
-                return
-
-            visited_docs.add(path)
-
-            with path.open("rb") as f:
-                doc, sha1 = oe_sbom.sbom.read_doc(f)
-                f.seek(0)
-
-                if doc.documentNamespace in visited_docs:
-                    return
-
-                bb.note("Adding SPDX document %s" % path)
-                visited_docs.add(doc.documentNamespace)
-                info = tar.gettarinfo(fileobj=f)
-
-                info.name = doc.name + ".spdx.json"
-                info.uid = 0
-                info.gid = 0
-                info.uname = "root"
-                info.gname = "root"
-
-                if source_date_epoch is not None and info.mtime > int(source_date_epoch):
-                    info.mtime = int(source_date_epoch)
-
-                tar.addfile(info, f)
-
-                index["documents"].append({
-                    "filename": info.name,
-                    "documentNamespace": doc.documentNamespace,
-                    "sha1": sha1,
-                })
-
-            for ref in doc.externalDocumentRefs:
-                ref_path = spdx_deploy_path(d, 'by-namespace', ref.spdxDocument.replace("/", "_"))
-                if ref_path == '':
-                    # FIXME: This should not happen.
-                    continue
-                ref_path = Path(ref_path)
-                collect_spdx_document(ref_path)
-
-        collect_spdx_document(image_spdx_path)
-
-        index["documents"].sort(key=lambda x: x["filename"])
-
-        index_str = io.BytesIO(json.dumps(index, sort_keys=True).encode("utf-8"))
-
-        info = tarfile.TarInfo()
-        info.name = "index.json"
-        info.size = len(index_str.getvalue())
-        info.uid = 0
-        info.gid = 0
-        info.uname = "root"
-        info.gname = "root"
-
-        tar.addfile(info, fileobj=index_str)
-
-    make_image_link(spdx_tar_path, ".spdx.tar.xz")
-
-    spdx_index_path = imgdeploydir / (image_name + ".spdx.index.json")
-    with spdx_index_path.open("w") as f:
-        json.dump(index, f, indent=2, sort_keys=True)
-
-    make_image_link(spdx_index_path, ".spdx.index.json")
+    make_image_link(imgdeploydir, image_link_name, image_spdx_path, ".spdx.json")
 }
-
