@@ -150,7 +150,7 @@ def convert_license_to_spdx(lic, document, d, existing={}):
         if l == "CLOSED":
             return "NONE"
 
-        spdx_license = d.getVarFlag("SPDXLICENSEMAP", l) or l
+        spdx_license = d.getVarFlag("SPDXLICENSEMAP", l, True) or l
         if spdx_license in license_data["licenses"]:
             return spdx_license
 
@@ -931,16 +931,16 @@ def replace_name(name, substitutes):
         return name
 
 def is_CPE_on(d):
-    return d.getVar('SBOM_CPE')
+    return d.getVar('SBOM_CPE', True)
 
 def is_PURL_on(d):
-    return d.getVar('SBOM_PURL')
+    return d.getVar('SBOM_PURL', True)
 
 def is_license_on(d):
-    return d.getVar('SBOM_license')
+    return d.getVar('SBOM_license', True)
 
 def is_externalDocumentRefs_on(d):
-    return d.getVar('SBOM_externalDocumentRefs')
+    return d.getVar('SBOM_externalDocumentRefs', True)
 
 python image_packages_spdx() {
     import os
@@ -956,7 +956,7 @@ python image_packages_spdx() {
     recipe_substitutes["linux-yocto"] = "linux"
 
     distro_substitues = {}
-    for distro in (d.getVar('SBOM_WRLINUX_DISTROS') or "").split():
+    for distro in (d.getVar('SBOM_WRLINUX_DISTROS', True) or "").split():
         distro_substitues[distro] = "wrlinux"
 
     def get_pkgdata(pkg_name):
@@ -1034,8 +1034,8 @@ python image_packages_spdx() {
     doc.packages.append(image)
 
     os_package = oe_sbom.spdx.SPDXPackage()
-    os_package.name = replace_name(d.getVar("DISTRO"), distro_substitues)
-    os_package.versionInfo = d.getVar("DISTRO_VERSION")
+    os_package.name = replace_name(d.getVar("DISTRO", True), distro_substitues)
+    os_package.versionInfo = d.getVar("DISTRO_VERSION", True)
     os_package.SPDXID = oe_sbom.sbom.get_os_spdxid(image_name)
 
     doc.packages.append(os_package)
@@ -1115,7 +1115,7 @@ python image_packages_spdx() {
                     purl.referenceType = "purl"
                     purl.referenceLocator = ("pkg:rpm/" + os_package.name + "/" +
                         component_package.name + "@" + component_package.versionInfo +
-                        "?arch=" + d.getVar("MACHINE_ARCH") + "&distro=" + d.getVar("DISTRO") + "-" + os_package.versionInfo)
+                        "?arch=" + d.getVar("MACHINE_ARCH", True) + "&distro=" + d.getVar("DISTRO", True) + "-" + os_package.versionInfo)
                     if d.getVar("PROJECT_LABELS", True):
                         purl.referenceLocator += "&label=" + str(d.getVar("PROJECT_LABELS", True))
                     if d.getVar("LTSS_VERSION", True):
