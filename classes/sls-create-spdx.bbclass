@@ -934,16 +934,16 @@ def replace_name(name, substitutes):
         return name
 
 def is_CPE_on(d):
-    return d.getVar('SBOM_CPE')
+    return d.getVar('SBOM_CPE') == "1"
 
 def is_PURL_on(d):
-    return d.getVar('SBOM_PURL')
+    return d.getVar('SBOM_PURL') == "1"
 
 def is_license_on(d):
-    return d.getVar('SBOM_license')
+    return d.getVar('SBOM_license') == "1"
 
 def is_externalDocumentRefs_on(d):
-    return d.getVar('SBOM_externalDocumentRefs')
+    return d.getVar('SBOM_externalDocumentRefs') == "1"
 
 python image_packages_spdx() {
     import os
