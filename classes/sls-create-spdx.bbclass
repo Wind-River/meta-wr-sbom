@@ -483,9 +483,8 @@ python do_create_spdx() {
     doc.creationInfo.created = creation_time
     doc.creationInfo.comment = "This document was created by analyzing recipe files during the build."
     doc.creationInfo.licenseListVersion = d.getVar("SPDX_LICENSE_DATA", True)["licenseListVersion"]
-    doc.creationInfo.creators.append("Tool: meta-wr-sbom sls-create-spdx.bbclass")
-    doc.creationInfo.creators.append("Organization: WindRiver ()")
-    doc.creationInfo.creators.append("Person: N/A ()")
+    doc.creationInfo.creators.append("Tool: meta-wr-sbom")
+    doc.creationInfo.creators.append("Organization: Wind River Systems, Inc.")
 
     recipe = oe_sbom.spdx.SPDXPackage()
     recipe.name = d.getVar("PN", True)
@@ -596,9 +595,8 @@ python do_create_spdx() {
             package_doc.creationInfo.created = creation_time
             package_doc.creationInfo.comment = "This document was created by analyzing packages created during the build."
             package_doc.creationInfo.licenseListVersion = d.getVar("SPDX_LICENSE_DATA", True)["licenseListVersion"]
-            package_doc.creationInfo.creators.append("Tool: meta-wr-sbom sls-create-spdx.bbclass")
-            package_doc.creationInfo.creators.append("Organization: WindRiver ()")
-            package_doc.creationInfo.creators.append("Person: N/A ()")
+            package_doc.creationInfo.creators.append("Tool: meta-wr-sbom")
+            package_doc.creationInfo.creators.append("Organization: Wind River Systems, Inc.")
             package_doc.externalDocumentRefs.append(recipe_ref)
 
             package_license = d.getVar("LICENSE:%s" % package, True) or d.getVar("LICENSE", True)
@@ -751,9 +749,8 @@ python do_create_runtime_spdx() {
             runtime_doc.creationInfo.created = creation_time
             runtime_doc.creationInfo.comment = "This document was created by analyzing package runtime dependencies."
             runtime_doc.creationInfo.licenseListVersion = d.getVar("SPDX_LICENSE_DATA", True)["licenseListVersion"]
-            runtime_doc.creationInfo.creators.append("Tool: meta-wr-sbom sls-create-spdx.bbclass")
-            runtime_doc.creationInfo.creators.append("Organization: WindRiver ()")
-            runtime_doc.creationInfo.creators.append("Person: N/A ()")
+            runtime_doc.creationInfo.creators.append("Tool: meta-wr-sbom")
+            runtime_doc.creationInfo.creators.append("Organization: Wind River Systems, Inc.")
 
             package_ref = oe_sbom.spdx.SPDXExternalDocumentRef()
             package_ref.externalDocumentId = "DocumentRef-package-" + package
@@ -983,9 +980,8 @@ python image_combine_spdx() {
     doc.creationInfo.created = creation_time
     doc.creationInfo.comment = "This document was created by analyzing the source of the Yocto recipe during the build."
     doc.creationInfo.licenseListVersion = d.getVar("SPDX_LICENSE_DATA", True)["licenseListVersion"]
-    doc.creationInfo.creators.append("Tool: meta-wr-sbom sls-create-spdx.bbclass")
-    doc.creationInfo.creators.append("Organization: WindRiver ()")
-    doc.creationInfo.creators.append("Person: N/A ()")
+    doc.creationInfo.creators.append("Tool: meta-wr-sbom")
+    doc.creationInfo.creators.append("Organization: Wind River Systems, Inc.")
     if 'Yocto' in d.getVar("DISTRO_NAME", True):
         doc.comment = "DISTRO: " + "Yocto-" + get_yocto_codename(d.getVar("DISTRO_VERSION", True)) + "-" + d.getVar("DISTRO_VERSION", True)
     elif 'Wind River' in d.getVar("DISTRO_NAME", True):
