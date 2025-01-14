@@ -510,10 +510,9 @@ python do_create_spdx() {
     if homepage:
         recipe.homepage = homepage
 
-    #license = d.getVar("LICENSE", True)
-    #if license:
-    #    recipe.licenseDeclared = convert_license_to_spdx(license, doc, d)
-    recipe.licenseDeclared = d.getVar("LICENSE", True)
+    license = d.getVar("LICENSE", True)
+    if license:
+        recipe.licenseDeclared = convert_license_to_spdx(license, doc, d)
 
     summary = d.getVar("SUMMARY", True)
     if summary:
@@ -606,8 +605,7 @@ python do_create_spdx() {
             spdx_package.SPDXID = oe_sbom.sbom.get_package_spdxid(pkg_name)
             spdx_package.name = pkg_name
             spdx_package.versionInfo = d.getVar("PV", True)
-            #spdx_package.licenseDeclared = convert_license_to_spdx(package_license, package_doc, d, found_licenses)
-            spdx_package.licenseDeclared = package_license
+            spdx_package.licenseDeclared = convert_license_to_spdx(package_license, package_doc, d, found_licenses)
 
             package_doc.packages.append(spdx_package)
 
