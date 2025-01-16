@@ -5,6 +5,8 @@ For commercial support options with meta-wr-sbom or Wind River Scanning Tool, pl
 
 ----------------------------------------------------------------------------------------
 # Supported Yocto Project Versions
+- [Yocto Project 5.1 (Styhead)](https://lists.yoctoproject.org/g/yocto/message/64044)	  
+- [Yocto Project 5.0 (Scarthgap)](https://lists.yoctoproject.org/g/yocto/message/63014)	  
 - [Yocto Project 4.3 (Nanbield)](https://lists.yoctoproject.org/g/yocto/message/61647)	  
 - [Yocto Project 4.2 (Mickledore)](https://lists.yoctoproject.org/g/yocto/message/59892)	  
 - [Yocto Project 4.1 (Langdale)](https://lists.yoctoproject.org/g/yocto/message/58398)	  
@@ -20,6 +22,7 @@ For commercial support options with meta-wr-sbom or Wind River Scanning Tool, pl
 - [Yocto Project 2.4 (Rocko)](https://lists.yoctoproject.org/pipermail/yocto-announce/2017-October/000125.html)   
 - [Yocto Project 2.3 (Pyro)](https://lists.yoctoproject.org/pipermail/yocto-announce/2017-May/000112.html)  
 - [Yocto Project 2.2 (Morty)](https://www.yoctoproject.org/pipermail/yocto-announce/2016-November/000101.html)  
+- [Wind River Linux LTS24](https://docs.windriver.com/category/os_linux_lts_24)
 - [Wind River Linux LTS23](https://docs.windriver.com/category/os_linux_lts_23)
 - [Wind River Linux LTS22](https://docs.windriver.com/category/os_linux_lts_22)
 - [Wind River Linux LTS21](https://docs.windriver.com/category/os_linux_lts_21)
