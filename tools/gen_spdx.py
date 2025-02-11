@@ -465,6 +465,9 @@ def generate_sbom(recipeDict):
     if "PROJECT_LABELS" in env_data.keys():
         doc.comment += "  PROJECT_LABELS: " + env_data["PROJECT_LABELS"]
 
+    if "SLS_REL_VER" in env_data.keys():
+        doc.comment += "  SLS_RELEASE_VERSION: " + env_data["SLS_REL_VER"]
+
     if "LTSS_VERSION" in env_data.keys():
         if ltss_version_validate(env_data["LTSS_VERSION"]):
             doc.comment += "  LTSS_VERSION: " + env_data["LTSS_VERSION"]
@@ -563,6 +566,7 @@ def main():
         line.startswith("IMAGE_ROOTFS=") or \
         line.startswith("LTSS_VERSION=") or \
         line.startswith("PROJECT_LABELS=") or \
+        line.startswith("SLS_REL_VER=") or \
         line.startswith("IMAGE_NAME="):
             line_data = line.split("=")
             env_data[line_data[0]] = line_data[1].strip().strip('"')
