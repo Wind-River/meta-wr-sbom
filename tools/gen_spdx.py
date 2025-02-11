@@ -16,9 +16,9 @@
 #
 #
 # Execute the script to generate the specified image SBOM:
-#   python ./gen_manifest.py target_image_name
+#   python ./gen_spdx.py target_image_name
 # Or generate default image SBOM:
-#   python ./gen_manifest.py
+#   python ./gen_spdx.py
 #
 # The target_image_name is the image target to generate manifest, such as 'wrlinux-image-small'.
 # The default image is the target image of 'make fs' command.
@@ -435,9 +435,8 @@ def getInstalledPkgs(license_manifest):
 def gen_SPDXPattern():
     doc = SPDXDocument()
     doc.creationInfo.created = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-    doc.creationInfo.creators.append("Tool: meta-wr-sbom gen_manifest.py")
-    doc.creationInfo.creators.append("Organization: WindRiver")
-    doc.creationInfo.creators.append("Person: N/A")
+    doc.creationInfo.creators.append("Tool: meta-wr-sbom gen_spdx.py")
+    doc.creationInfo.creators.append("Organization: Wind River Systems, Inc.")
     return doc
 
 def get_yocto_version(bitbake_version):
