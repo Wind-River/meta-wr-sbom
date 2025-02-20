@@ -166,6 +166,18 @@ def convert_license_to_spdx(lic, document, d, existing={}):
 
     return ' '.join(convert(l) for l in lic_split)
 
+def get_distro_type(d):
+    if 'Yocto' in d.getVar("DISTRO_NAME", True):
+        return "Yocto"
+    elif 'Wind River' in d.getVar("DISTRO_NAME", True):
+        return "WRLinux"
+    else:
+        wr_version = d.getVar("WRLINUX_VERSION", True)
+        if wr_version:
+            return "WRLinux"
+        else:
+            return "Yocto"
+
 def get_final_pkg_name(d, package):
     distro_ver = d.getVar("DISTRO_VERSION", True)
     if 'Wind River' in d.getVar("DISTRO_NAME", True):
@@ -1034,7 +1046,7 @@ python image_packages_spdx() {
     doc.packages.append(image)
 
     os_package = oe_sbom.spdx.SPDXPackage()
-    os_package.name = replace_name(d.getVar("DISTRO", True), distro_substitues)
+    os_package.name = get_distro_type(d)
     os_package.versionInfo = d.getVar("DISTRO_VERSION", True)
     os_package.SPDXID = oe_sbom.sbom.get_os_spdxid(image_name)
 
@@ -1115,7 +1127,7 @@ python image_packages_spdx() {
                     purl.referenceType = "purl"
                     purl.referenceLocator = ("pkg:rpm/" + os_package.name + "/" +
                         component_package.name + "@" + component_package.versionInfo +
-                        "?arch=" + d.getVar("MACHINE_ARCH", True) + "&distro=" + d.getVar("DISTRO", True) + "-" + os_package.versionInfo)
+                        "?arch=" + d.getVar("MACHINE_ARCH") + "&distro=" + os_package.name + "-" + os_package.versionInfo)
                     if d.getVar("PROJECT_LABELS", True):
                         purl.referenceLocator += "&label=" + str(d.getVar("PROJECT_LABELS", True))
                     if d.getVar("LTSS_VERSION", True):
