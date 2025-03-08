@@ -1127,7 +1127,7 @@ python image_packages_spdx() {
                     purl.referenceType = "purl"
                     purl.referenceLocator = ("pkg:rpm/" + os_package.name + "/" +
                         component_package.name + "@" + component_package.versionInfo +
-                        "?arch=" + d.getVar("MACHINE_ARCH") + "&distro=" + os_package.name + "-" + os_package.versionInfo)
+                        "?arch=" + d.getVar("MACHINE_ARCH", True) + "&distro=" + os_package.name + "-" + os_package.versionInfo)
                     if d.getVar("PROJECT_LABELS", True):
                         purl.referenceLocator += "&label=" + str(d.getVar("PROJECT_LABELS", True))
                     if d.getVar("LTSS_VERSION", True):
