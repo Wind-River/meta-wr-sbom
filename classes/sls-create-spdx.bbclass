@@ -1051,11 +1051,14 @@ python image_packages_spdx() {
     pattern_docref_recipe = r'DocumentRef-recipe-.*\:'
     pattern_licref = r'LicenseRef-[a-zA-Z0-9.-]+'
 
+    kernel_recipe = d.getVar("PREFERRED_PROVIDER_virtual/kernel", True)
+
     for name in sorted(packages.keys()):
-        # skip package when its name start "kernel-", because it is
-        # part of "kernel" package
-        if name.startswith("kernel-"):
-            continue
+        # Keep only one kernel package, filter out module packages.
+        pkgdata = get_pkgdata(name)
+        if pkgdata["PN"] == kernel_recipe:
+            if kernel_recipe in recipes.keys():
+                continue
 
         pkg_spdx_path = deploy_dir_spdx / "packages" / (name + ".spdx.json")
         if not os.path.exists(str(pkg_spdx_path)):
@@ -1076,8 +1079,9 @@ python image_packages_spdx() {
                 doc.add_relationship("%s" % os_package.SPDXID, "CONTAINS", "%s" % p.SPDXID)
 
                 component_package = oe_sbom.spdx.SPDXPackage()
-                pkgdata = get_pkgdata(p.name)
                 component_package.name = p.name
+                if pkgdata["PN"] == kernel_recipe:
+                    component_package.name = "kernel"
                 component_package.SPDXID = p.SPDXID
 
                 if (not "PR" in pkgdata.keys()) or (not pkgdata["PR"]):
