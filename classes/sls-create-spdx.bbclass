@@ -554,7 +554,7 @@ python do_create_spdx() {
         for cpe_id in cpe_ids:
             cpe = oe_sbom.spdx.SPDXExternalReference()
             cpe.referenceCategory = "SECURITY"
-            cpe.referenceType = "http://spdx.org/rdf/references/cpe23Type"
+            cpe.referenceType = "cpe23Type"
             cpe.referenceLocator = cpe_id
             recipe.externalRefs.append(cpe)
 
@@ -991,6 +991,9 @@ python image_packages_spdx() {
             if lic_id not in results.keys():
                 results[lic_id] = {}
 
+    def clear_spdxid_improper_char(s):
+        return re.sub('[^a-zA-Z0-9.-:]', '-', s)
+
     creation_time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     image_name = d.getVar("IMAGE_NAME", True)
     image_link_name = d.getVar("IMAGE_LINK_NAME", True)
@@ -1009,16 +1012,20 @@ python image_packages_spdx() {
     doc.creationInfo.creators.append("Organization: Wind River Systems, Inc.")
     if 'Yocto' in d.getVar("DISTRO_NAME", True):
         doc.comment = "DISTRO: " + "Yocto-" + get_yocto_codename(d.getVar("DISTRO_VERSION", True)) + "-" + d.getVar("DISTRO_VERSION", True)
+        image_supplier = "Organization: OpenEmbedded ()"
     elif 'Wind River' in d.getVar("DISTRO_NAME", True):
         doc.comment = "DISTRO: " + "WRLinux-" + d.getVar("DISTRO_VERSION", True)
+        image_supplier = "Organization: Wind River Systems, Inc."
     else:
         wr_version = d.getVar("WRLINUX_VERSION", True)
         if wr_version:
             doc.comment = "DISTRO: " + "WRLinux-" + wr_version
+            image_supplier = "Organization: Wind River Systems, Inc."
         else:
             bb_version = d.getVar("BB_VERSION", True)
             yocto_version = get_yocto_version(bb_version)
             doc.comment = "DISTRO: " + "Yocto-" + get_yocto_codename(yocto_version) + "-" + yocto_version
+            image_supplier = "Organization: OpenEmbedded ()"
 
         D_name = d.getVar("DISTRO_NAME", True).strip().replace(" ", "_")
         if D_name:
@@ -1041,27 +1048,64 @@ python image_packages_spdx() {
     image = oe_sbom.spdx.SPDXPackage()
     image.name = d.getVar("PN", True)
     image.versionInfo = d.getVar("EXTENDPKGV", True)
-    image.SPDXID = oe_sbom.sbom.get_image_spdxid(image_name)
+    image.SPDXID = clear_spdxid_improper_char(oe_sbom.sbom.get_image_spdxid(image_name))
+    image.supplier = image_supplier
 
     doc.packages.append(image)
 
     os_package = oe_sbom.spdx.SPDXPackage()
     os_package.name = get_distro_type(d)
     os_package.versionInfo = d.getVar("DISTRO_VERSION", True)
-    os_package.SPDXID = oe_sbom.sbom.get_os_spdxid(image_name)
+    os_package.SPDXID = clear_spdxid_improper_char(oe_sbom.sbom.get_os_spdxid(image_name))
+    os_package.supplier = image_supplier
 
     doc.packages.append(os_package)
 
+    doc.add_relationship(doc, "DESCRIBES", "%s" % image.SPDXID)
     doc.add_relationship(image, "CONTAINS", "%s" % os_package.SPDXID)
 
     spdx_package = oe_sbom.spdx.SPDXPackage()
 
     packages = image_list_installed_packages(d)
     recipes = {}
+    externaldocrefs = set()
     user_defined_licenses = {}
     user_defined_licenses_extracted = {}
     pattern_docref_recipe = r'DocumentRef-recipe-.*\:'
     pattern_licref = r'LicenseRef-[a-zA-Z0-9.-]+'
+
+    def collect_dep_relationships(spdx_file_path, relationship_type):
+        spdx_doc, spdx_doc_sha1 = oe_sbom.sbom.read_doc(spdx_file_path)
+
+        for r in spdx_doc.relationships:
+            if r.relationshipType == relationship_type:
+                if relationship_type == "RUNTIME_DEPENDENCY_OF":
+                    r.relatedSpdxElement = clear_spdxid_improper_char(r.relatedSpdxElement.split(":")[1])
+                    # the runtime depend packages Ref must exists in local doc
+                    r.spdxElementId = clear_spdxid_improper_char(r.spdxElementId.split(":")[1])
+                    doc.relationships.append(r)
+
+                    continue
+
+                elif relationship_type == "BUILD_DEPENDENCY_OF":
+                    r.relatedSpdxElement = clear_spdxid_improper_char("%s:%s" % (r.relatedSpdxElement.replace('SPDXRef-Recipe', 'DocumentRef-recipe'), r.relatedSpdxElement))
+                    related_doc_ref = r.spdxElementId.split(":")[0]
+                    r.spdxElementId = clear_spdxid_improper_char(r.spdxElementId.replace("dependency-", ""))
+                    doc.relationships.append(r)
+                elif relationship_type == "GENERATED_FROM":
+                    if r.spdxElementId.startswith("SPDXRef-Package-"):
+                        related_doc_ref = r.relatedSpdxElement.split(":")[0]
+                        r.relatedSpdxElement = clear_spdxid_improper_char(r.relatedSpdxElement)
+                        r.spdxElementId = clear_spdxid_improper_char(r.spdxElementId)
+                        doc.relationships.append(r)
+
+                for ed in spdx_doc.externalDocumentRefs:
+                    if ed.externalDocumentId == related_doc_ref:
+                        ed.externalDocumentId = clear_spdxid_improper_char(ed.externalDocumentId.replace("dependency-", ""))
+                        if ed.externalDocumentId not in externaldocrefs:
+                            doc.externalDocumentRefs.append(ed)
+                            externaldocrefs.add(ed.externalDocumentId)
+                        break
 
     kernel_recipe = d.getVar("PREFERRED_PROVIDER_virtual/kernel", True)
 
@@ -1073,14 +1117,17 @@ python image_packages_spdx() {
                 continue
 
         pkg_spdx_path = deploy_dir_spdx / "packages" / (name + ".spdx.json")
+        rcp_spdx_path = deploy_dir_spdx / "recipes" / ("recipe-" + pkgdata["PN"] + ".spdx.json")
+        runtime_pkg_spdx_path = deploy_dir_spdx / "runtime" / ("runtime-" + name + ".spdx.json")
         if not os.path.exists(str(pkg_spdx_path)):
+            bb.warn("Unable to find package SPDX file %s" %  pkg_spdx_path)
             continue
         pkg_doc, pkg_doc_sha1 = oe_sbom.sbom.read_doc(pkg_spdx_path)
 
         for p in pkg_doc.packages:
             if p.name == name:
                 pkg_ref = oe_sbom.spdx.SPDXExternalDocumentRef()
-                pkg_ref.externalDocumentId = "DocumentRef-%s" % pkg_doc.name
+                pkg_ref.externalDocumentId = clear_spdxid_improper_char("DocumentRef-package-%s" % pkg_doc.name)
                 pkg_ref.spdxDocument = pkg_doc.documentNamespace
                 pkg_ref.checksum.algorithm = "SHA1"
                 pkg_ref.checksum.checksumValue = pkg_doc_sha1
@@ -1088,13 +1135,16 @@ python image_packages_spdx() {
                 if is_externalDocumentRefs_on(d):
                     doc.externalDocumentRefs.append(pkg_ref)
 
-                doc.add_relationship("%s" % os_package.SPDXID, "CONTAINS", "%s" % p.SPDXID)
+                doc.add_relationship("%s" % os_package.SPDXID, "CONTAINS", "%s" % clear_spdxid_improper_char(p.SPDXID))
+                collect_dep_relationships(pkg_spdx_path, "GENERATED_FROM")
+                collect_dep_relationships(rcp_spdx_path, "BUILD_DEPENDENCY_OF")
+                collect_dep_relationships(runtime_pkg_spdx_path, "RUNTIME_DEPENDENCY_OF")
 
                 component_package = oe_sbom.spdx.SPDXPackage()
                 component_package.name = p.name
                 if pkgdata["PN"] == kernel_recipe:
                     component_package.name = "kernel"
-                component_package.SPDXID = p.SPDXID
+                component_package.SPDXID = clear_spdxid_improper_char(p.SPDXID)
 
                 if (not "PR" in pkgdata.keys()) or (not pkgdata["PR"]):
                     component_package.versionInfo = pkgdata["PV"]
@@ -1117,7 +1167,7 @@ python image_packages_spdx() {
                     collect_lics(pattern_licref, component_package.licenseDeclared, user_defined_licenses)
 
                 component_package.copyrightText = p.copyrightText
-                component_package.supplier = p.supplier
+                component_package.supplier = "Organization: OpenEmbedded ()"
                 source_name = replace_name(pkgdata["PN"], recipe_substitutes)
                 component_package.sourceInfo = "built package from: " + source_name + " " + component_package.versionInfo
 
