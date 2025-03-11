@@ -676,7 +676,7 @@ def spdx_disable_task(d, task):
     pn = d.getVar('PN', True)
     is_native = bb.data.inherits_class('native', d) or pn.endswith('-native')
     is_blocked = pn in d.getVar('SPDX_BLACKLIST', True).split()
-    current_mc = d.getVar('BB_CURRENT_MC')
+    current_mc = d.getVar('BB_CURRENT_MC', True)
 
     if (is_native and current_mc != '') or is_blocked:
         d.setVarFlag(task, 'noexec', '1')
@@ -946,16 +946,16 @@ def replace_name(name, substitutes):
         return name
 
 def is_CPE_on(d):
-    return d.getVar('SBOM_CPE') == "1"
+    return d.getVar('SBOM_CPE', True) == "1"
 
 def is_PURL_on(d):
-    return d.getVar('SBOM_PURL') == "1"
+    return d.getVar('SBOM_PURL', True) == "1"
 
 def is_license_on(d):
-    return d.getVar('SBOM_license') == "1"
+    return d.getVar('SBOM_license', True) == "1"
 
 def is_externalDocumentRefs_on(d):
-    return d.getVar('SBOM_externalDocumentRefs') == "1"
+    return d.getVar('SBOM_externalDocumentRefs', True) == "1"
 
 python image_packages_spdx() {
     import os
@@ -971,7 +971,7 @@ python image_packages_spdx() {
     recipe_substitutes["linux-yocto"] = "linux"
 
     distro_substitues = {}
-    for distro in (d.getVar('SBOM_WRLINUX_DISTROS') or "").split():
+    for distro in (d.getVar('SBOM_WRLINUX_DISTROS', True) or "").split():
         distro_substitues[distro] = "wrlinux"
 
     def get_pkgdata(pkg_name):
@@ -1043,7 +1043,7 @@ python image_packages_spdx() {
 
     os_package = oe_sbom.spdx.SPDXPackage()
     os_package.name = get_distro_type(d)
-    os_package.versionInfo = d.getVar("DISTRO_VERSION")
+    os_package.versionInfo = d.getVar("DISTRO_VERSION", True)
     os_package.SPDXID = clear_spdxid_improper_char(oe_sbom.sbom.get_os_spdxid(image_name))
     os_package.supplier = image_supplier
 
