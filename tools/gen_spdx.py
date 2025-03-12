@@ -475,13 +475,15 @@ def generate_sbom(recipeDict):
             doc.comment += "  LTSS_VERSION: mismatch"
             print("WARN: LTSS_VERSION value is not in the regular list.")
 
-
     for name in recipeDict.keys():
         if name.startswith("packagegroup-"):
             continue
         for version in recipeDict[name].keys():
             package = SPDXPackage()
-            package.name = name
+            if "PREFERRED_PROVIDER_virtual/kernel" in env_data.keys() and name == env_data["PREFERRED_PROVIDER_virtual/kernel"]:
+                package.name = "kernel"
+            else:
+                package.name = name
             package.SPDXID = "SPDXRef-%s-%s" % ("Recipe", name)
             package.versionInfo = version
             package.licenseDeclared = recipeDict[name][version][0]["licenseDeclared"]
@@ -567,6 +569,7 @@ def main():
         line.startswith("LTSS_VERSION=") or \
         line.startswith("PROJECT_LABELS=") or \
         line.startswith("SLS_REL_VER=") or \
+        line.startswith("PREFERRED_PROVIDER_virtual/kernel=") or \
         line.startswith("IMAGE_NAME="):
             line_data = line.split("=")
             env_data[line_data[0]] = line_data[1].strip().strip('"')
