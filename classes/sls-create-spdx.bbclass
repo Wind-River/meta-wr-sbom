@@ -1079,7 +1079,11 @@ python image_packages_spdx() {
                     r.relatedSpdxElement = clear_spdxid_improper_char("%s:%s" % (r.relatedSpdxElement.replace('SPDXRef-Recipe', 'DocumentRef-recipe'), r.relatedSpdxElement))
                     related_doc_ref = r.spdxElementId.split(":")[0]
                     r.spdxElementId = clear_spdxid_improper_char(r.spdxElementId.replace("dependency-", ""))
-                    doc.relationships.append(r)
+                    for chk_dup in doc.relationships:
+                        if chk_dup.spdxElementId == r.spdxElementId and chk_dup.relatedSpdxElement == r.relatedSpdxElement:
+                            break
+                    else:
+                        doc.relationships.append(r)
                 elif relationship_type == "GENERATED_FROM":
                     if r.spdxElementId.startswith("SPDXRef-Package-"):
                         related_doc_ref = r.relatedSpdxElement.split(":")[0]
