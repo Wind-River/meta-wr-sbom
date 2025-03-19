@@ -174,15 +174,15 @@ def convert_license_to_spdx(lic, document, d, existing={}):
 
 def get_distro_type(d):
     if 'Yocto' in d.getVar("DISTRO_NAME", True):
-        return "Yocto"
+        return "yocto"
     elif 'Wind River' in d.getVar("DISTRO_NAME", True):
-        return "WRLinux"
+        return "wrlinux"
     else:
         wr_version = d.getVar("WRLINUX_VERSION", True)
         if wr_version:
-            return "WRLinux"
+            return "wrlinux"
         else:
-            return "Yocto"
+            return "yocto"
 
 def get_final_pkg_name(d, package):
     distro_ver = d.getVar("DISTRO_VERSION", True)
