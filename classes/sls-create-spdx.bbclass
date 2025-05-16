@@ -1175,7 +1175,7 @@ python image_packages_spdx() {
                         component_package.name + "@" + component_package.versionInfo +
                         "?arch=" + d.getVar("MACHINE_ARCH", True) + "&distro=" + os_package.name + "-" + os_package.versionInfo)
                     if d.getVar("PROJECT_LABELS", True):
-                        purl.referenceLocator += "&label=" + str(d.getVar("PROJECT_LABELS", True))
+                        purl.referenceLocator += "&labels=" + str(d.getVar("PROJECT_LABELS", True))
                     if d.getVar("LTSS_VERSION", True):
                         purl.referenceLocator += "&ltssVersion=" + str(d.getVar("LTSS_VERSION", True))
                     component_package.externalRefs.append(purl)
