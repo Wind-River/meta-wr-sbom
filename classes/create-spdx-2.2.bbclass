@@ -422,13 +422,10 @@ python do_create_spdx() {
     @contextmanager
     def optional_tarfile(name, guard, mode="w"):
         import tarfile
-        import bb.compress.zstd
-
-        num_threads = int(d.getVar("BB_NUMBER_THREADS"))
 
         if guard:
             name.parent.mkdir(parents=True, exist_ok=True)
-            with bb.compress.zstd.open(name, mode=mode + "b", num_threads=num_threads) as f:
+            with gzip.open(str(name), mode=mode + "b", compresslevel=3) as f:
                 with tarfile.open(fileobj=f, mode=mode + "|") as tf:
                     yield tf
         else:
@@ -507,7 +504,7 @@ python do_create_spdx() {
     add_download_packages(d, doc, recipe)
 
     if oe_sbom.spdx_common.process_sources(d) and include_sources:
-        recipe_archive = deploy_dir_spdx / "recipes" / (doc.name + ".tar.zst")
+        recipe_archive = deploy_dir_spdx / "recipes" / (doc.name + ".tar.gz")
         with optional_tarfile(recipe_archive, archive_sources) as archive:
             oe_sbom.spdx_common.get_patched_src(d)
 
@@ -575,7 +572,7 @@ python do_create_spdx() {
             package_doc.add_relationship(spdx_package, "GENERATED_FROM", "%s:%s" % (recipe_ref.externalDocumentId, recipe.SPDXID))
             package_doc.add_relationship(package_doc, "DESCRIBES", spdx_package)
 
-            package_archive = deploy_dir_spdx / "packages" / (package_doc.name + ".tar.zst")
+            package_archive = deploy_dir_spdx / "packages" / (package_doc.name + ".tar.gz")
             with optional_tarfile(package_archive, archive_packaged) as archive:
                 package_files = add_package_files(
                     d,
@@ -701,15 +698,17 @@ python do_create_runtime_spdx() {
                     continue
                 
                 dep_pkg_data = oe.packagedata.read_subpkgdata_dict(dep, d)
-                print("XXXX", dep_pkg_data)
                 dep_pkg = dep_pkg_data["PKG"]
 
                 if dep in dep_package_cache:
                     (dep_spdx_package, dep_package_ref) = dep_package_cache[dep]
                 else:
                     dep_path = oe_sbom.sbom.doc_find_by_hashfn(deploy_dir_spdx, package_archs, dep_pkg, dep_hashfn)
+                    #if not dep_path:
+                    #    dep_path = oe_sbom.sbom.doc_find_by_hashfn(deploy_dir_spdx, package_archs, dep_pkg_data["PN"], dep_hashfn)
                     if not dep_path:
-                        bb.fatal("No SPDX file found for package %s, %s" % (dep_pkg, dep_hashfn))
+                        bb.fatal("No SPDX file found for package %s, %s, %s" % (dep_pkg, dep_hashfn, dep_pkg_data["PN"]))
+
 
                     spdx_dep_doc, spdx_dep_sha1 = oe_sbom.sbom.read_doc(dep_path)
 
@@ -784,10 +783,10 @@ python image_combine_spdx() {
         if image_link_name:
             link = imgdeploydir / (image_link_name + suffix)
             if link != target_path:
-                link.symlink_to(os.path.relpath(target_path, link.parent))
+                link.symlink_to(os.path.relpath(str(target_path), str(link.parent)))
 
-    spdx_tar_path = imgdeploydir / (image_name + ".spdx.tar.zst")
-    make_image_link(spdx_tar_path, ".spdx.tar.zst")
+    spdx_tar_path = imgdeploydir / (image_name + ".spdx.tar.gz")
+    make_image_link(spdx_tar_path, ".spdx.tar.gz")
 }
 
 python sdk_host_combine_spdx() {
@@ -819,7 +818,7 @@ def combine_spdx(d, rootfs_name, rootfs_deploydir, rootfs_spdxid, packages, spdx
     from datetime import timezone, datetime
     from pathlib import Path
     import tarfile
-    import bb.compress.zstd
+    import gzip
 
     license_data = oe_sbom.spdx_common.load_spdx_license_data(d)
 
@@ -896,20 +895,18 @@ def combine_spdx(d, rootfs_name, rootfs_deploydir, rootfs_spdxid, packages, spdx
                 "%s:%s" % (runtime_ref.externalDocumentId, runtime_doc.SPDXID),
                 comment="Runtime dependencies for %s" % name
             )
-    bb.utils.mkdirhier(spdx_workdir)
+    bb.utils.mkdirhier(str(spdx_workdir))
     image_spdx_path = spdx_workdir / (rootfs_name + ".spdx.json")
 
     with image_spdx_path.open("wb") as f:
         doc.to_json(f, sort_keys=True, indent=get_json_indent(d))
 
-    num_threads = int(d.getVar("BB_NUMBER_THREADS"))
-
     visited_docs = set()
 
     index = {"documents": []}
 
-    spdx_tar_path = rootfs_deploydir / (rootfs_name + ".spdx.tar.zst")
-    with bb.compress.zstd.open(spdx_tar_path, "w", num_threads=num_threads) as f:
+    spdx_tar_path = rootfs_deploydir / (rootfs_name + ".spdx.tar.gz")
+    with gzip.open(str(spdx_tar_path), "w", compresslevel=3) as f:
         with tarfile.open(fileobj=f, mode="w|") as tar:
             def collect_spdx_document(path):
                 nonlocal tar
