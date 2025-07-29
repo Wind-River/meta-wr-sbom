@@ -494,7 +494,7 @@ python do_create_spdx() {
         for cpe_id in cpe_ids:
             cpe = oe_sbom.spdx.SPDXExternalReference()
             cpe.referenceCategory = "SECURITY"
-            cpe.referenceType = "http://spdx.org/rdf/references/cpe23Type"
+            cpe.referenceType = "cpe23Type"
             cpe.referenceLocator = cpe_id
             recipe.externalRefs.append(cpe)
 
@@ -546,7 +546,7 @@ python do_create_spdx() {
                 continue
 
             package_doc = oe_sbom.spdx.SPDXDocument()
-            pkg_name = d.getVar("PKG:%s" % package) or package
+            pkg_name = d.getVar("PKG_%s" % package) or package
             package_doc.name = pkg_name
             package_doc.documentNamespace = get_namespace(d, package_doc.name)
             package_doc.creationInfo.created = creation_time
@@ -557,7 +557,7 @@ python do_create_spdx() {
             package_doc.creationInfo.creators.append("Person: N/A ()")
             package_doc.externalDocumentRefs.append(recipe_ref)
 
-            package_license = d.getVar("LICENSE:%s" % package) or d.getVar("LICENSE")
+            package_license = d.getVar("LICENSE_%s" % package) or d.getVar("LICENSE")
 
             spdx_package = oe_sbom.spdx.SPDXPackage()
 
@@ -641,7 +641,7 @@ python do_create_runtime_spdx() {
         pkgdest = Path(d.getVar("PKGDEST"))
         for package in d.getVar("PACKAGES").split():
             localdata = bb.data.createCopy(d)
-            pkg_name = d.getVar("PKG:%s" % package) or package
+            pkg_name = d.getVar("PKG_%s" % package) or package
             localdata.setVar("PKG", pkg_name)
             localdata.setVar('OVERRIDES', d.getVar("OVERRIDES", False) + ":" + package)
 
@@ -704,11 +704,8 @@ python do_create_runtime_spdx() {
                     (dep_spdx_package, dep_package_ref) = dep_package_cache[dep]
                 else:
                     dep_path = oe_sbom.sbom.doc_find_by_hashfn(deploy_dir_spdx, package_archs, dep_pkg, dep_hashfn)
-                    #if not dep_path:
-                    #    dep_path = oe_sbom.sbom.doc_find_by_hashfn(deploy_dir_spdx, package_archs, dep_pkg_data["PN"], dep_hashfn)
                     if not dep_path:
-                        bb.fatal("No SPDX file found for package %s, %s, %s" % (dep_pkg, dep_hashfn, dep_pkg_data["PN"]))
-
+                        bb.fatal("No SPDX file found for package %s, %s" % (dep_pkg, dep_hashfn))
 
                     spdx_dep_doc, spdx_dep_sha1 = oe_sbom.sbom.read_doc(dep_path)
 
@@ -855,7 +852,7 @@ def combine_spdx(d, rootfs_name, rootfs_deploydir, rootfs_spdxid, packages, spdx
 
             pkg_name, pkg_hashfn = providers[name]
 
-            pkg_spdx_path = oe_sbom.sbom.doc_find_by_hashfn(deploy_dir_spdx, package_archs, pkg_name, pkg_hashfn)
+            pkg_spdx_path = oe_sbom.sbom.doc_find_by_hashfn(deploy_dir_spdx, package_archs, pkg_name, pkg_hashfn)          
             if not pkg_spdx_path:
                 bb.fatal("No SPDX file found for package %s, %s" % (pkg_name, pkg_hashfn))
 
