@@ -113,12 +113,12 @@ def convert_license_to_spdx(lic, license_data, document, d, existing={}):
             return "NONE"
 
         spdx_license = d.getVarFlag("SPDXLICENSEMAP", l) or l
+        # Some licenses are deprecated and need to be converted to formal SPDX licenses
+        if spdx_license in spdx_license_map.keys():
+            return spdx_license_map[l]
+
         if spdx_license in license_data["licenses"]:
             return spdx_license
-            
-        # Some licenses needs to be converted to formal SPDX licenses
-        if l in spdx_license_map.keys():
-            return spdx_license_map[l]
 
         try:
             spdx_license = existing[l]
@@ -561,7 +561,7 @@ python do_create_spdx() {
 
             spdx_package = oe_sbom.spdx.SPDXPackage()
 
-            spdx_package.SPDXID = oe_sbom.sbom.get_package_spdxid(pkg_name)
+            spdx_package.SPDXID = oe_sbom.sbom.sanitize_spdx_id(oe_sbom.sbom.get_package_spdxid(pkg_name))
             spdx_package.name = pkg_name
             spdx_package.versionInfo = d.getVar("SPDX_PACKAGE_VERSION")
             spdx_package.licenseDeclared = convert_license_to_spdx(package_license, license_data, package_doc, d, found_licenses)
@@ -579,7 +579,7 @@ python do_create_spdx() {
                     package_doc,
                     spdx_package,
                     pkgdest / package,
-                    lambda file_counter: oe_sbom.sbom.get_packaged_file_spdxid(pkg_name, file_counter),
+                    lambda file_counter: oe_sbom.sbom.sanitize_spdx_id(oe_sbom.sbom.get_packaged_file_spdxid(pkg_name, file_counter)),
                     lambda filepath: ["BINARY"],
                     ignore_top_level_dirs=['CONTROL', 'DEBIAN'],
                     archive=archive,

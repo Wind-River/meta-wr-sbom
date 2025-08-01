@@ -10,6 +10,16 @@ import os
 DepRecipe = collections.namedtuple("DepRecipe", ("doc", "doc_sha1", "recipe"))
 DepSource = collections.namedtuple("DepSource", ("doc", "doc_sha1", "recipe", "file"))
 
+def sanitize_spdx_id(spdx_id):
+    """
+    Sanitize SPDX ID to comply with SPDX 2.2 specification.
+    Replace underscores and other invalid characters with hyphens.
+    """
+    import re
+    # Replace underscores and other invalid characters with hyphens
+    sanitized = re.sub(r'[^a-zA-Z0-9.-]', '-', spdx_id)
+
+    return sanitized
 
 def get_recipe_spdxid(d):
     return "SPDXRef-%s-%s" % ("Recipe", d.getVar("PN"))
@@ -20,7 +30,7 @@ def get_download_spdxid(d, idx):
 
 
 def get_package_spdxid(pkg):
-    return "SPDXRef-Package-%s" % pkg
+    return sanitize_spdx_id("SPDXRef-Package-%s" % pkg)
 
 
 def get_source_file_spdxid(d, idx):
@@ -28,7 +38,7 @@ def get_source_file_spdxid(d, idx):
 
 
 def get_packaged_file_spdxid(pkg, idx):
-    return "SPDXRef-PackagedFile-%s-%d" % (pkg, idx)
+    return sanitize_spdx_id("SPDXRef-PackagedFile-%s-%d" % (pkg, idx))
 
 
 def get_image_spdxid(img):
