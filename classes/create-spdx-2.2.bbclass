@@ -115,7 +115,7 @@ def convert_license_to_spdx(lic, license_data, document, d, existing={}):
         spdx_license = d.getVarFlag("SPDXLICENSEMAP", l) or l
         # Some licenses are deprecated and need to be converted to formal SPDX licenses
         if spdx_license in spdx_license_map.keys():
-            return spdx_license_map[l]
+            return spdx_license_map[spdx_license]
 
         if spdx_license in license_data["licenses"]:
             return spdx_license
