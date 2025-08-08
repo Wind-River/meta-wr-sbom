@@ -4,9 +4,11 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
+import os
+import shlex
+import subprocess
 import oe.path
 import oe.types
-import subprocess
 
 class NotFoundError(bb.BBHandledException):
     def __init__(self, path):
@@ -27,8 +29,6 @@ class CmdError(bb.BBHandledException):
 
 
 def runcmd(args, dir = None):
-    import pipes
-
     if dir:
         olddir = os.path.abspath(os.curdir)
         if not os.path.exists(dir):
@@ -37,7 +37,7 @@ def runcmd(args, dir = None):
         # print("cwd: %s -> %s" % (olddir, dir))
 
     try:
-        args = [ pipes.quote(str(arg)) for arg in args ]
+        args = [ shlex.quote(str(arg)) for arg in args ]
         cmd = " ".join(args)
         # print("cmd: %s" % cmd)
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -217,7 +217,7 @@ class PatchTree(PatchSet):
         with open(self.seriespath, 'w') as f:
             for p in patches:
                 f.write(p)
-         
+
     def Import(self, patch, force = None):
         """"""
         PatchSet.Import(self, patch, force)
@@ -294,26 +294,32 @@ class PatchTree(PatchSet):
         self.Pop(all=True)
 
 class GitApplyTree(PatchTree):
-    patch_line_prefix = '%% original patch'
-    ignore_commit_prefix = '%% ignore'
+    notes_ref = "refs/notes/devtool"
+    original_patch = 'original patch'
+    ignore_commit = 'ignore'
 
     def __init__(self, dir, d):
         PatchTree.__init__(self, dir, d)
-        self.commituser = d.getVar('PATCH_GIT_USER_NAME', True)
-        self.commitemail = d.getVar('PATCH_GIT_USER_EMAIL', True)
-        if not self._isInitialized():
+        self.commituser = d.getVar('PATCH_GIT_USER_NAME')
+        self.commitemail = d.getVar('PATCH_GIT_USER_EMAIL')
+        if not self._isInitialized(d):
             self._initRepo()
 
-    def _isInitialized(self):
+    def _isInitialized(self, d):
         cmd = "git rev-parse --show-toplevel"
-        (status, output) = subprocess.getstatusoutput(cmd.split())
-        ## Make sure repo is in builddir to not break top-level git repos
-        return status == 0 and os.path.samedir(output, self.dir)
+        try:
+            output = runcmd(cmd.split(), self.dir).strip()
+        except CmdError as err:
+            ## runcmd returned non-zero which most likely means 128
+            ## Not a git directory
+            return False
+        ## Make sure repo is in builddir to not break top-level git repos, or under workdir
+        return os.path.samefile(output, self.dir) or oe.path.is_path_parent(d.getVar('WORKDIR'), output)
 
     def _initRepo(self):
         runcmd("git init".split(), self.dir)
         runcmd("git add .".split(), self.dir)
-        runcmd("git commit -a --allow-empty -m Patching_started".split(), self.dir)
+        runcmd("git commit -a --allow-empty -m bitbake_patching_started".split(), self.dir)
 
     @staticmethod
     def extractPatchHeader(patchfile):
@@ -402,8 +408,8 @@ class GitApplyTree(PatchTree):
     @staticmethod
     def gitCommandUserOptions(cmd, commituser=None, commitemail=None, d=None):
         if d:
-            commituser = d.getVar('PATCH_GIT_USER_NAME', True)
-            commitemail = d.getVar('PATCH_GIT_USER_EMAIL', True)
+            commituser = d.getVar('PATCH_GIT_USER_NAME')
+            commitemail = d.getVar('PATCH_GIT_USER_EMAIL')
         if commituser:
             cmd += ['-c', 'user.name="%s"' % commituser]
         if commitemail:
@@ -447,7 +453,7 @@ class GitApplyTree(PatchTree):
         # Prepare git command
         cmd = ["git"]
         GitApplyTree.gitCommandUserOptions(cmd, commituser, commitemail)
-        cmd += ["commit", "-F", tmpfile]
+        cmd += ["commit", "-F", tmpfile, "--no-verify"]
         # git doesn't like plain email addresses as authors
         if author and '<' in author:
             cmd.append('--author="%s"' % author)
@@ -456,43 +462,132 @@ class GitApplyTree(PatchTree):
         return (tmpfile, cmd)
 
     @staticmethod
-    def extractPatches(tree, startcommit, outdir, paths=None):
+    def addNote(repo, ref, key, value=None, commituser=None, commitemail=None):
+        note = key + (": %s" % value if value else "")
+        notes_ref = GitApplyTree.notes_ref
+        runcmd(["git", "config", "notes.rewriteMode", "ignore"], repo)
+        runcmd(["git", "config", "notes.displayRef", notes_ref, notes_ref], repo)
+        runcmd(["git", "config", "notes.rewriteRef", notes_ref, notes_ref], repo)
+        cmd = ["git"]
+        GitApplyTree.gitCommandUserOptions(cmd, commituser, commitemail)
+        runcmd(cmd + ["notes", "--ref", notes_ref, "append", "-m", note, ref], repo)
+
+    @staticmethod
+    def removeNote(repo, ref, key, commituser=None, commitemail=None):
+        notes = GitApplyTree.getNotes(repo, ref)
+        notes = {k: v for k, v in notes.items() if k != key and not k.startswith(key + ":")}
+        runcmd(["git", "notes", "--ref", GitApplyTree.notes_ref, "remove", "--ignore-missing", ref], repo)
+        for note, value in notes.items():
+            GitApplyTree.addNote(repo, ref, note, value, commituser, commitemail)
+
+    @staticmethod
+    def getNotes(repo, ref):
+        import re
+
+        note = None
+        try:
+            note = runcmd(["git", "notes", "--ref", GitApplyTree.notes_ref, "show", ref], repo)
+            prefix = ""
+        except CmdError:
+            note = runcmd(['git', 'show', '-s', '--format=%B', ref], repo)
+            prefix = "%% "
+
+        note_re = re.compile(r'^%s(.*?)(?::\s*(.*))?$' % prefix)
+        notes = dict()
+        for line in note.splitlines():
+            m = note_re.match(line)
+            if m:
+                notes[m.group(1)] = m.group(2)
+
+        return notes
+
+    @staticmethod
+    def commitIgnored(subject, dir=None, files=None, d=None):
+        if files:
+            runcmd(['git', 'add'] + files, dir)
+        cmd = ["git"]
+        GitApplyTree.gitCommandUserOptions(cmd, d=d)
+        cmd += ["commit", "-m", subject, "--no-verify"]
+        runcmd(cmd, dir)
+        GitApplyTree.addNote(dir, "HEAD", GitApplyTree.ignore_commit, d.getVar('PATCH_GIT_USER_NAME'), d.getVar('PATCH_GIT_USER_EMAIL'))
+
+    @staticmethod
+    def extractPatches(tree, startcommits, outdir, paths=None):
         import tempfile
         import shutil
         tempdir = tempfile.mkdtemp(prefix='oepatch')
         try:
-            shellcmd = ["git", "format-patch", "--no-signature", "--no-numbered", startcommit, "-o", tempdir]
-            if paths:
-                shellcmd.append('--')
-                shellcmd.extend(paths)
-            out = runcmd(["sh", "-c", " ".join(shellcmd)], tree)
-            if out:
-                for srcfile in out.split():
-                    for encoding in ['utf-8', 'latin-1']:
-                        patchlines = []
-                        outfile = None
-                        try:
-                            with open(srcfile, 'r', encoding=encoding) as f:
-                                for line in f:
-                                    if line.startswith(GitApplyTree.patch_line_prefix):
-                                        outfile = line.split()[-1].strip()
-                                        continue
-                                    if line.startswith(GitApplyTree.ignore_commit_prefix):
-                                        continue
-                                    patchlines.append(line)
-                        except UnicodeDecodeError:
-                            continue
-                        break
-                    else:
-                        raise PatchError('Unable to find a character encoding to decode %s' % srcfile)
+            for name, rev in startcommits.items():
+                shellcmd = ["git", "format-patch", "--no-signature", "--no-numbered", rev, "-o", tempdir]
+                if paths:
+                    shellcmd.append('--')
+                    shellcmd.extend(paths)
+                out = runcmd(["sh", "-c", " ".join(shellcmd)], os.path.join(tree, name))
+                if out:
+                    for srcfile in out.split():
+                        # This loop, which is used to remove any line that
+                        # starts with "%% original patch", is kept for backwards
+                        # compatibility. If/when that compatibility is dropped,
+                        # it can be replaced with code to just read the first
+                        # line of the patch file to get the SHA-1, and the code
+                        # below that writes the modified patch file can be
+                        # replaced with a simple file move.
+                        for encoding in ['utf-8', 'latin-1']:
+                            patchlines = []
+                            try:
+                                with open(srcfile, 'r', encoding=encoding, newline='') as f:
+                                    for line in f:
+                                        if line.startswith("%% " + GitApplyTree.original_patch):
+                                            continue
+                                        patchlines.append(line)
+                            except UnicodeDecodeError:
+                                continue
+                            break
+                        else:
+                            raise PatchError('Unable to find a character encoding to decode %s' % srcfile)
 
-                    if not outfile:
-                        outfile = os.path.basename(srcfile)
-                    with open(os.path.join(outdir, outfile), 'w') as of:
-                        for line in patchlines:
-                            of.write(line)
+                        sha1 = patchlines[0].split()[1]
+                        notes = GitApplyTree.getNotes(os.path.join(tree, name), sha1)
+                        if GitApplyTree.ignore_commit in notes:
+                            continue
+                        outfile = notes.get(GitApplyTree.original_patch, os.path.basename(srcfile))
+
+                        bb.utils.mkdirhier(os.path.join(outdir, name))
+                        with open(os.path.join(outdir, name, outfile), 'w') as of:
+                            for line in patchlines:
+                                of.write(line)
         finally:
             shutil.rmtree(tempdir)
+
+    def _need_dirty_check(self):
+        fetch = bb.fetch2.Fetch([], self.d)
+        check_dirtyness = False
+        for url in fetch.urls:
+            url_data = fetch.ud[url]
+            parm = url_data.parm
+            # a git url with subpath param will surely be dirty
+            # since the git tree from which we clone will be emptied
+            # from all files that are not in the subpath
+            if url_data.type == 'git' and parm.get('subpath'):
+                check_dirtyness = True
+        return check_dirtyness
+
+    def _commitpatch(self, patch, patchfilevar):
+        output = ""
+        # Add all files
+        shellcmd = ["git", "add", "-f", "-A", "."]
+        output += runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
+        # Exclude the patches directory
+        shellcmd = ["git", "reset", "HEAD", self.patchdir]
+        output += runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
+        # Commit the result
+        (tmpfile, shellcmd) = self.prepareCommit(patch['file'], self.commituser, self.commitemail)
+        try:
+            shellcmd.insert(0, patchfilevar)
+            output += runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
+        finally:
+            os.remove(tmpfile)
+        return output
 
     def _applypatch(self, patch, force = False, reverse = False, run = True):
         import shutil
@@ -508,27 +603,26 @@ class GitApplyTree(PatchTree):
 
             return runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
 
-        # Add hooks which add a pointer to the original patch file name in the commit message
         reporoot = (runcmd("git rev-parse --show-toplevel".split(), self.dir) or '').strip()
         if not reporoot:
             raise Exception("Cannot get repository root for directory %s" % self.dir)
-        hooks_dir = os.path.join(reporoot, '.git', 'hooks')
-        hooks_dir_backup = hooks_dir + '.devtool-orig'
-        if os.path.lexists(hooks_dir_backup):
-            raise Exception("Git hooks backup directory already exists: %s" % hooks_dir_backup)
-        if os.path.lexists(hooks_dir):
-            shutil.move(hooks_dir, hooks_dir_backup)
-        os.mkdir(hooks_dir)
-        commithook = os.path.join(hooks_dir, 'commit-msg')
-        applyhook = os.path.join(hooks_dir, 'applypatch-msg')
-        with open(commithook, 'w') as f:
-            # NOTE: the formatting here is significant; if you change it you'll also need to
-            # change other places which read it back
-            f.write('echo "\n%s: $PATCHFILE" >> $1' % GitApplyTree.patch_line_prefix)
-        os.chmod(commithook, 0o755)
-        shutil.copy2(commithook, applyhook)
+
+        patch_applied = True
         try:
             patchfilevar = 'PATCHFILE="%s"' % os.path.basename(patch['file'])
+            if self._need_dirty_check():
+                # Check dirtyness of the tree
+                try:
+                    output = runcmd(["git", "--work-tree=%s" % reporoot, "status", "--short"])
+                except CmdError:
+                    pass
+                else:
+                    if output:
+                        # The tree is dirty, no need to try to apply patches with git anymore
+                        # since they fail, fallback directly to patch
+                        output = PatchTree._applypatch(self, patch, force, reverse, run)
+                        output += self._commitpatch(patch, patchfilevar)
+                        return output
             try:
                 shellcmd = [patchfilevar, "git", "--work-tree=%s" % reporoot]
                 self.gitCommandUserOptions(shellcmd, self.commituser, self.commitemail)
@@ -555,29 +649,19 @@ class GitApplyTree(PatchTree):
                 except CmdError:
                     # Fall back to patch
                     output = PatchTree._applypatch(self, patch, force, reverse, run)
-                # Add all files
-                shellcmd = ["git", "add", "-f", "-A", "."]
-                output += runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
-                # Exclude the patches directory
-                shellcmd = ["git", "reset", "HEAD", self.patchdir]
-                output += runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
-                # Commit the result
-                (tmpfile, shellcmd) = self.prepareCommit(patch['file'], self.commituser, self.commitemail)
-                try:
-                    shellcmd.insert(0, patchfilevar)
-                    output += runcmd(["sh", "-c", " ".join(shellcmd)], self.dir)
-                finally:
-                    os.remove(tmpfile)
+                output += self._commitpatch(patch, patchfilevar)
                 return output
+        except:
+            patch_applied = False
+            raise
         finally:
-            shutil.rmtree(hooks_dir)
-            if os.path.lexists(hooks_dir_backup):
-                shutil.move(hooks_dir_backup, hooks_dir)
+            if patch_applied:
+                GitApplyTree.addNote(self.dir, "HEAD", GitApplyTree.original_patch, os.path.basename(patch['file']), self.commituser, self.commitemail)
 
 
 class QuiltTree(PatchSet):
     def _runcmd(self, args, run = True):
-        quiltrc = self.d.getVar('QUILTRCFILE', True)
+        quiltrc = self.d.getVar('QUILTRCFILE')
         if not run:
             return ["quilt"] + ["--quiltrc"] + [quiltrc] + args
         runcmd(["quilt"] + ["--quiltrc"] + [quiltrc] + args, self.dir)
@@ -595,6 +679,8 @@ class QuiltTree(PatchSet):
 
     def Clean(self):
         try:
+            # make sure that patches/series file exists before quilt pop to keep quilt-0.67 happy
+            open(os.path.join(self.dir, "patches","series"), 'a').close()
             self._runcmd(["pop", "-a", "-f"])
             oe.path.remove(os.path.join(self.dir, "patches","series"))
         except Exception:
@@ -731,8 +817,9 @@ class NOOPResolver(Resolver):
             self.patchset.Push()
         except Exception:
             import sys
-            os.chdir(olddir)
             raise
+        finally:
+            os.chdir(olddir)
 
 # Patch resolver which relies on the user doing all the work involved in the
 # resolution, with the exception of refreshing the remote copy of the patch
@@ -753,7 +840,7 @@ class UserResolver(Resolver):
             # Patch application failed
             patchcmd = self.patchset.Push(True, False, False)
 
-            t = self.patchset.d.getVar('T', True)
+            t = self.patchset.d.getVar('T')
             if not t:
                 bb.msg.fatal("Build", "T not set")
             bb.utils.mkdirhier(t)
@@ -792,12 +879,12 @@ class UserResolver(Resolver):
                             # User did not fix the problem.  Abort.
                             raise PatchError("Patch application failed, and user did not fix and refresh the patch.")
         except Exception:
-            os.chdir(olddir)
             raise
-        os.chdir(olddir)
+        finally:
+            os.chdir(olddir)
 
 
-def patch_path(url, fetch, workdir, expand=True):
+def patch_path(url, fetch, unpackdir, expand=True):
     """Return the local path of a patch, or return nothing if this isn't a patch"""
 
     local = fetch.localpath(url)
@@ -806,7 +893,7 @@ def patch_path(url, fetch, workdir, expand=True):
     base, ext = os.path.splitext(os.path.basename(local))
     if ext in ('.gz', '.bz2', '.xz', '.Z'):
         if expand:
-            local = os.path.join(workdir, base)
+            local = os.path.join(unpackdir, base)
         ext = os.path.splitext(base)[1]
 
     urldata = fetch.ud[url]
@@ -820,12 +907,12 @@ def patch_path(url, fetch, workdir, expand=True):
     return local
 
 def src_patches(d, all=False, expand=True):
-    workdir = d.getVar('WORKDIR', True)
+    unpackdir = d.getVar('UNPACKDIR')
     fetch = bb.fetch2.Fetch([], d)
     patches = []
     sources = []
     for url in fetch.urls:
-        local = patch_path(url, fetch, workdir, expand)
+        local = patch_path(url, fetch, unpackdir, expand)
         if not local:
             if all:
                 local = fetch.localpath(url)
@@ -868,13 +955,13 @@ def src_patches(d, all=False, expand=True):
 def should_apply(parm, d):
     import bb.utils
     if "mindate" in parm or "maxdate" in parm:
-        pn = d.getVar('PN', True)
-        srcdate = d.getVar('SRCDATE_%s' % pn, True)
+        pn = d.getVar('PN')
+        srcdate = d.getVar('SRCDATE_%s' % pn)
         if not srcdate:
-            srcdate = d.getVar('SRCDATE', True)
+            srcdate = d.getVar('SRCDATE')
 
         if srcdate == "now":
-            srcdate = d.getVar('DATE', True)
+            srcdate = d.getVar('DATE')
 
         if "maxdate" in parm and parm["maxdate"] < srcdate:
             return False, 'is outdated'
@@ -884,34 +971,33 @@ def should_apply(parm, d):
 
 
     if "minrev" in parm:
-        srcrev = d.getVar('SRCREV', True)
+        srcrev = d.getVar('SRCREV')
         if srcrev and srcrev < parm["minrev"]:
             return False, 'applies to later revisions'
 
     if "maxrev" in parm:
-        srcrev = d.getVar('SRCREV', True)
+        srcrev = d.getVar('SRCREV')
         if srcrev and srcrev > parm["maxrev"]:
             return False, 'applies to earlier revisions'
 
     if "rev" in parm:
-        srcrev = d.getVar('SRCREV', True)
+        srcrev = d.getVar('SRCREV')
         if srcrev and parm["rev"] not in srcrev:
             return False, "doesn't apply to revision"
 
     if "notrev" in parm:
-        srcrev = d.getVar('SRCREV', True)
+        srcrev = d.getVar('SRCREV')
         if srcrev and parm["notrev"] in srcrev:
             return False, "doesn't apply to revision"
 
     if "maxver" in parm:
-        pv = d.getVar('PV', True)
+        pv = d.getVar('PV')
         if bb.utils.vercmp_string_op(pv, parm["maxver"], ">"):
             return False, "applies to earlier version"
 
     if "minver" in parm:
-        pv = d.getVar('PV', True)
+        pv = d.getVar('PV')
         if bb.utils.vercmp_string_op(pv, parm["minver"], "<"):
             return False, "applies to later version"
 
     return True, None
-
