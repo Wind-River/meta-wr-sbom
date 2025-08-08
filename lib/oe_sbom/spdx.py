@@ -107,10 +107,13 @@ class _ListProperty(_Property):
                 obj._spdx[name] = []
             return obj._spdx[name]
 
+        def set_helper(obj, value):
+            obj._spdx[name] = list(value)
+
         def del_helper(obj):
             del obj._spdx[name]
 
-        attrs[name] = property(get_helper, None, del_helper)
+        attrs[name] = property(get_helper, set_helper, del_helper)
 
     def init(self, source):
         return [self.prop.init(o) for o in source]
@@ -213,6 +216,18 @@ class SPDXPackageVerificationCode(SPDXObject):
 
 
 class SPDXPackage(SPDXObject):
+    ALLOWED_CHECKSUMS = [
+        "SHA1",
+        "SHA224",
+        "SHA256",
+        "SHA384",
+        "SHA512",
+        "MD2",
+        "MD4",
+        "MD5",
+        "MD6",
+    ]
+
     name = _String()
     SPDXID = _String()
     versionInfo = _String()
@@ -231,7 +246,7 @@ class SPDXPackage(SPDXObject):
     hasFiles = _StringList()
     packageFileName = _String()
     annotations = _ObjectList(SPDXAnnotation)
-    comment = _String()
+    checksums = _ObjectList(SPDXChecksum)
 
 
 class SPDXFile(SPDXObject):
@@ -271,18 +286,16 @@ class SPDXDocument(SPDXObject):
     name = _String()
     documentNamespace = _String()
     creationInfo = _Object(SPDXCreationInfo)
-    comment = _String()
     packages = _ObjectList(SPDXPackage)
     files = _ObjectList(SPDXFile)
     relationships = _ObjectList(SPDXRelationship)
-    documentDescribes = _StringList()
     externalDocumentRefs = _ObjectList(SPDXExternalDocumentRef)
     hasExtractedLicensingInfos = _ObjectList(SPDXExtractedLicensingInfo)
 
     def __init__(self, **d):
         super().__init__(**d)
 
-    def to_json(self, f, *, sort_keys=False, indent=2, separators=None):
+    def to_json(self, f, *, sort_keys=False, indent=None, separators=None):
         class Encoder(json.JSONEncoder):
             def default(self, o):
                 if isinstance(o, SPDXObject):
@@ -304,7 +317,8 @@ class SPDXDocument(SPDXObject):
 
     @classmethod
     def from_json(cls, f):
-        return cls(**json.loads(f.read().decode('utf-8', 'replace')))
+        content = f.read().decode("utf-8")
+        return cls(**json.loads(content))
 
     def add_relationship(self, _from, relationship, _to, *, comment=None, annotation=None):
         if isinstance(_from, SPDXObject):
