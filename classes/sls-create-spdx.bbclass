@@ -174,15 +174,15 @@ def convert_license_to_spdx(lic, document, d, existing={}):
 
 def get_distro_type(d):
     if 'Yocto' in d.getVar("DISTRO_NAME", True):
-        return "yocto"
+        return "yocto", d.getVar("DISTRO_VERSION", True)
     elif 'Wind River' in d.getVar("DISTRO_NAME", True):
-        return "wrlinux"
+        return "wrlinux", d.getVar("DISTRO_VERSION", True)
     else:
         wr_version = d.getVar("WRLINUX_VERSION", True)
         if wr_version:
-            return "wrlinux"
+            return "wrlinux", d.getVar("WRLINUX_VERSION", True)
         else:
-            return "yocto"
+            return "yocto", get_yocto_version(bb_version)
 
 def get_final_pkg_name(d, package):
     distro_ver = d.getVar("DISTRO_VERSION", True)
@@ -1042,8 +1042,7 @@ python image_packages_spdx() {
     doc.packages.append(image)
 
     os_package = oe_sbom.spdx.SPDXPackage()
-    os_package.name = get_distro_type(d)
-    os_package.versionInfo = d.getVar("DISTRO_VERSION", True)
+    os_package.name, os_package.versionInfo = get_distro_type(d)
     os_package.SPDXID = clear_spdxid_improper_char(oe_sbom.sbom.get_os_spdxid(image_name))
     os_package.supplier = image_supplier
 
