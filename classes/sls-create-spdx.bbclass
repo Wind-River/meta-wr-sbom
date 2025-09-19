@@ -182,6 +182,7 @@ def get_distro_type(d):
         if wr_version:
             return "wrlinux", d.getVar("WRLINUX_VERSION", True)
         else:
+            bb_version = d.getVar("BB_VERSION", True)
             return "yocto", get_yocto_version(bb_version)
 
 def get_final_pkg_name(d, package):
