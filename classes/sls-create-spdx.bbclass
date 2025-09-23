@@ -1181,6 +1181,16 @@ python image_packages_spdx() {
                 source_name = replace_name(pkgdata["PN"], recipe_substitutes)
                 component_package.sourceInfo = "built package from: " + source_name + " " + component_package.versionInfo
 
+                if os.path.exists(str(rcp_spdx_path)):
+                    rcp_doc, rcp_doc_sha1 = oe_sbom.sbom.read_doc(rcp_spdx_path)
+                    recipe_info = rcp_doc.packages[0]
+                    try:
+                        component_package.comment = recipe_info.sourceInfo
+                    except KeyError:
+                        pass
+                else:
+                    bb.warn("Unable to find package SPDX file %s" %  rcp_spdx_path)
+
                 if pkgdata["PN"] not in recipes.keys():
                     recipes[pkgdata["PN"]] = []
                 recipes[pkgdata["PN"]].append(p.SPDXID)
