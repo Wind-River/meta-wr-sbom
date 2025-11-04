@@ -1148,7 +1148,8 @@ python image_packages_spdx() {
                 doc.add_relationship("%s" % os_package.SPDXID, "CONTAINS", "%s" % clear_spdxid_improper_char(p.SPDXID))
                 collect_dep_relationships(pkg_spdx_path, "GENERATED_FROM")
                 collect_dep_relationships(rcp_spdx_path, "BUILD_DEPENDENCY_OF")
-                collect_dep_relationships(runtime_pkg_spdx_path, "RUNTIME_DEPENDENCY_OF")
+                if not pkgdata["PN"] == kernel_recipe:
+                    collect_dep_relationships(runtime_pkg_spdx_path, "RUNTIME_DEPENDENCY_OF")
 
                 component_package = oe_sbom.spdx.SPDXPackage()
                 component_package.name = p.name
