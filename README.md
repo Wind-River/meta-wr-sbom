@@ -5,6 +5,7 @@ For commercial support options with meta-wr-sbom or Wind River Scanning Tool, pl
 
 ----------------------------------------------------------------------------------------
 # Supported Yocto Project Versions
+- [Yocto Project 5.2 (Walnascar)](https://lists.yoctoproject.org/g/yocto/message/65297)	  
 - [Yocto Project 5.1 (Styhead)](https://lists.yoctoproject.org/g/yocto/message/64044)	  
 - [Yocto Project 5.0 (Scarthgap)](https://lists.yoctoproject.org/g/yocto/message/63014)	  
 - [Yocto Project 4.3 (Nanbield)](https://lists.yoctoproject.org/g/yocto/message/61647)	  

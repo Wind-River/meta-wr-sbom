@@ -6,6 +6,7 @@
 
 
 yocto_version_to_codename = {
+    "5.2": "Walnascar",
     "5.1": "Styhead",
     "5.0": "scarthgap",
     "4.3": "Nanbield",
@@ -38,6 +39,7 @@ yocto_version_to_codename = {
 }
 
 bb_version_to_yocto_version = {
+    "2.12": "5.2",
     "2.9": "5.1",
     "2.8": "5.0",
     "2.6": "4.3",
