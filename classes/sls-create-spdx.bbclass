@@ -53,6 +53,71 @@ def create_annotation(d, comment):
     annotation.comment = comment
     return annotation
 
+def get_variable_value(d, var, pn, pkg=None):
+    sep = ":" if ":" in (d.getVar("OVERRIDES") or "") else "_"
+
+    value = None
+    if pkg:
+       value = d.getVar(f"{var}{sep}{pkg}", True)
+    if not value:
+       value = d.getVar(f"{var}{sep}{pn}", True)
+    if not value:
+       value = d.getVar(f"{var}{sep}DEFAULT", True)
+
+    if not value:
+       return None
+    return value
+
+def generate_origin_annotation(d, pn, pkg=None):
+    allowed_origins = ['open-source', 'commercial', 'off-the-shelf']
+
+    origin_str = get_variable_value(d,'ORIGIN', pn, pkg)
+    if not origin_str:
+       return []
+
+    origin = origin_str.lower()
+    if not (origin in allowed_origins):
+       bb.warn("Invalid ORIGIN type %s for %s" % (origin_str, pkg if pkg else pn))
+       return []
+
+    return [create_annotation(d, "origin: %s" % origin)]
+
+def normalize_timestamp(ts_str):
+    from datetime import datetime, timezone
+
+    try:
+        fmt = "%Y-%m-%d"
+        ts = datetime.strptime(ts_str, fmt)
+    except Exception as e:
+        bb.debug(1, "Failed to parse timestamp %s: %s" % (ts_str, str(e)))
+        return None
+
+    return ts.replace(hour=23, minute=59, second=59, microsecond=0, tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z')
+
+def generate_validuntil_annotation(d, pn, pkg=None):
+    validuntil_str = get_variable_value(d, 'VALIDUNTILDATE', pn, pkg)
+    if not validuntil_str:
+       return []
+
+    validuntil = normalize_timestamp(validuntil_str)
+    if not validuntil:
+       bb.warn("Invalid validuntil timestamp %s for %s" % (validuntil_str, pkg if pkg else pn))
+       return []
+
+    return [create_annotation(d, 'validUntilDate: %s' % validuntil)]
+
+def generate_eos_annotation(d, pn, pkg=None):
+    eos_str = get_variable_value(d, 'EOS', pn, pkg)
+    if not eos_str:
+       return []
+
+    eos = normalize_timestamp(eos_str)
+    if not eos:
+       bb.warn("Invalid EOS timestamp %s for %s" % (eos_str, pkg if pkg else pn))
+       return []
+
+    return [create_annotation(d, 'eos: %s' % eos)]
+
 def recipe_spdx_is_native(d, recipe):
     return any(a.annotationType == "OTHER" and
       a.annotator == "Tool: %s - %s" % (d.getVar("SPDX_TOOL_NAME", True), d.getVar("SPDX_TOOL_VERSION", True)) and
@@ -632,6 +697,14 @@ python do_create_spdx() {
             spdx_package.versionInfo = d.getVar("PV", True)
             spdx_package.licenseDeclared = convert_license_to_spdx(package_license, package_doc, d, found_licenses)
 
+            pn = d.getVar('PN', True)
+            annotations = []
+            annotations.extend(generate_origin_annotation(d, pn, pkg_name))
+            annotations.extend(generate_validuntil_annotation(d, pn, pkg_name))
+            annotations.extend(generate_eos_annotation(d, pn, pkg_name))
+            if annotations:
+                spdx_package.annotations.extend(annotations)
+
             package_doc.packages.append(spdx_package)
 
             package_doc.add_relationship(spdx_package, "GENERATED_FROM", "%s:%s" % (recipe_ref.externalDocumentId, recipe.SPDXID))
@@ -675,6 +748,17 @@ do_create_spdx[cleandirs] = "${SPDXDEPLOY} ${SPDXWORK}"
 do_create_spdx[depends] += "${PATCHDEPENDENCY}"
 do_create_spdx[deptask] = "do_create_spdx"
 do_create_spdx[lockfiles] = "${SPDXWORK}/create_spdx.lock"
+
+# Add the package specific ORIGINs, VALIDUNTILDATEs and EOSs to the sstate dependencies
+python () {
+    pkgs = (d.getVar('PACKAGES') or '').split()
+    for pkg in pkgs:
+        d.appendVarFlag("do_create_spdx", "vardeps", " ORIGIN:{}".format(pkg))
+        d.appendVarFlag("do_create_spdx", "vardeps", " VALIDUNTILDATE:{}".format(pkg))
+        d.appendVarFlag("do_create_spdx", "vardeps", " EOS:{}".format(pkg))
+}
+
+do_create_spdx[vardeps] += "ORIGIN:DEFAULT VALIDUNTILDATE:DEFAULT EOS:DEFAULT"
 
 def spdx_disable_task(d, task):
     pn = d.getVar('PN', True)
