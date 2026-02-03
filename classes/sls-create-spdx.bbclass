@@ -1246,6 +1246,9 @@ python image_packages_spdx() {
                 else:
                     component_package.versionInfo = pkgdata["PV"] + "-" + pkgdata["PR"]
 
+                if p.annotations:
+                    component_package.annotations.extend(p.annotations)
+
                 # Use downloadLocation from package spdx file, because downloadLocation
                 # from recipe spdx file may refers to local path
                 component_package.downloadLocation = p.downloadLocation
