@@ -1161,7 +1161,7 @@ python image_packages_spdx() {
     externaldocrefs = set()
     user_defined_licenses = {}
     user_defined_licenses_extracted = {}
-    pattern_docref_recipe = r'DocumentRef-recipe-.*\:'
+    pattern_docref_recipe = r'DocumentRef-recipe-.*?\:'
     pattern_licref = r'LicenseRef-[a-zA-Z0-9.-]+'
 
     def collect_dep_relationships(spdx_file_path, relationship_type):
