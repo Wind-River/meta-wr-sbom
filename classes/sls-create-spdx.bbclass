@@ -58,11 +58,14 @@ def get_variable_value(d, var, pn, pkg=None):
 
     value = None
     if pkg:
-       value = d.getVar(f"{var}{sep}{pkg}", True)
+       var_name = "{}{}{}".format(var, sep, pkg)
+       value = d.getVar(var_name, True)
     if not value:
-       value = d.getVar(f"{var}{sep}{pn}", True)
+       var_name = "{}{}{}".format(var, sep, pn)
+       value = d.getVar(var_name, True)
     if not value:
-       value = d.getVar(f"{var}{sep}DEFAULT", True)
+       var_name = "{}{}DEFAULT".format(var, sep)
+       value = d.getVar(var_name, True)
 
     if not value:
        return None
