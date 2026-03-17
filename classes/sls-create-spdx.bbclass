@@ -54,7 +54,7 @@ def create_annotation(d, comment):
     return annotation
 
 def get_variable_value(d, var, pn, pkg=None):
-    sep = ":" if ":" in (d.getVar("OVERRIDES") or "") else "_"
+    sep = ":" if ":" in (d.getVar("OVERRIDES", True) or "") else "_"
 
     value = None
     if pkg:
@@ -754,7 +754,7 @@ do_create_spdx[lockfiles] = "${SPDXWORK}/create_spdx.lock"
 
 # Add the package specific ORIGINs, VALIDUNTILDATEs and EOSs to the sstate dependencies
 python () {
-    pkgs = (d.getVar('PACKAGES') or '').split()
+    pkgs = (d.getVar('PACKAGES', True) or '').split()
     for pkg in pkgs:
         d.appendVarFlag("do_create_spdx", "vardeps", " ORIGIN:{}".format(pkg))
         d.appendVarFlag("do_create_spdx", "vardeps", " VALIDUNTILDATE:{}".format(pkg))
