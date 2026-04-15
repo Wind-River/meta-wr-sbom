@@ -439,9 +439,11 @@ def spdx_deploy_path(d, subdir, name):
     multiconfig = d.getVar('BBMULTICONFIG', True)
     deploy_dir_spdx = d.getVar('DEPLOY_DIR_SPDX', True)
 
-    if multiconfig == '':
+    # No BBMULTICONFIG case (either empty string or not set)
+    if not multiconfig:
         return os.path.join(deploy_dir_spdx, subdir, name)
 
+    ## BBMULTICONFIG set
     try:
         deploy_path = glob.glob(os.path.join(deploy_dir_spdx, "..", "*", subdir, name))[0]
     except IndexError:
@@ -462,9 +464,14 @@ def collect_dep_recipes(d, doc, spdx_recipe):
             dep[1] == "do_create_spdx" and dep[0] != d.getVar("PN", True)
     ))
     for dep_pn in deps:
+        # Ignore native deps, as they don't produce .spdx.json
+        if dep_pn.endswith('-native'):
+            continue
+
         dep_recipe_path = spdx_deploy_path(d, "recipes", ("recipe-%s.spdx.json" % dep_pn))
         if dep_recipe_path == '':
             # FIXME: This should not happen.
+            bb.warn("SPDX path empty for %s" % str(dep_pn))
             continue
         dep_recipe_path = Path(dep_recipe_path)
 
