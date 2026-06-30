@@ -1086,7 +1086,7 @@ python image_packages_spdx() {
         return pkgdata
 
     def ltss_version_validate(ltss_version):
-        ltss_version_restrict = ['WRL.LTS.5.0.1', 'WRL.LTS.6.0', 'WRL.LTS.7.0', 'WRL.LTS.8.0', 'WRL.LTS.9.0', 'WRL.LTS.17', 'WRL.LTS.18', 'WRL.LTS.19']
+        ltss_version_restrict = ['WRL.LTS.5.0.1', 'WRL.LTS.6.0', 'WRL.LTS.7.0', 'WRL.LTS.8.0', 'WRL.LTS.9.0', 'WRL.LTS.17', 'WRL.LTS.18', 'WRL.LTS.19', 'WRL.LTS.21']
         if ltss_version in ltss_version_restrict:
             return True
         else:
